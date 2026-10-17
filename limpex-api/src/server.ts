@@ -25,7 +25,7 @@ app.use(express.json());
 // Rotas da API
 app.use('/auth', authRoutes);
 app.use('/address', addressRouter);
-app.use('/prestador', prestadorRouter);
+app.use('/prestadores', prestadorRouter);
 app.use('/solicitacoes', solicitacaoRouter);
 
 // Rota de Teste (Healthcheck)
@@ -36,6 +36,11 @@ app.get('/health', async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: 'Erro ao conectar no banco de dados' });
   }
+});
+// Rota para listar categorias de serviços
+app.get('/categorias', async (req, res) => {
+  const result = await pool.query('SELECT * FROM categoria_servico ORDER BY nome ASC');
+  res.json(result.rows);
 });
 
 const PORT = process.env.PORT || 3000;

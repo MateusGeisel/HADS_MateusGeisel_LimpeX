@@ -4,24 +4,20 @@ import { authMiddleware } from '../middlewares/authMiddleware';
 
 const prestadorRouter = Router();
 
-// Rota de consulta externa de CNPJ
+// 1. Rotas estáticas / específicas do prestador (Fiscais e MEI)
 prestadorRouter.get('/cnpj/:cnpj', authMiddleware, PrestadorController.consultarCnpj);
-
-// Rota para salvar dados do prestador
 prestadorRouter.post('/dados-fiscais', authMiddleware, PrestadorController.salvarDadosFiscais);
-
-//Rota para registrar progresso da trilha MEI
 prestadorRouter.post('/trilha-mei', authMiddleware, PrestadorController.registrarProgressoTrilha);
 
-// Rota pública / autenticada para contratantes navegarem
-prestadorRouter.get('/', authMiddleware, PrestadorController.listarTodos);
-prestadorRouter.get('/:id', authMiddleware, PrestadorController.buscarPerfil);
-
-// Rotas do prestador para gerenciar seus serviços
-prestadorRouter.post('/servicos', authMiddleware, PrestadorController.criarServico);
-
-// Rota para listar serviços do prestador autenticado
+// 2. Rotas de gestão de serviços e agenda (Devem vir ANTES das rotas dinâmicas com /:id)
 prestadorRouter.get('/servicos/meus', authMiddleware, PrestadorController.listarMeusServicos);
+prestadorRouter.post('/servicos', authMiddleware, PrestadorController.criarServico);
 prestadorRouter.patch('/agenda', authMiddleware, PrestadorController.atualizarAgenda);
+
+// 3. Rotas da Vitrine (Públicas e Busca)
+prestadorRouter.get('/', authMiddleware, PrestadorController.listarTodos);
+
+// 4. ATENÇÃO: A rota com parâmetro de ID deve ficar SEMPRE ao final
+prestadorRouter.get('/:id', authMiddleware, PrestadorController.buscarPerfil);
 
 export default prestadorRouter;

@@ -172,6 +172,26 @@ class PrestadorService {
     }
   }
 
+  // Listar categorias de serviços disponíveis para cadastro
+  Future<List<dynamic>> listarCategorias() async {
+    final token = await _authService.getToken();
+    if (token == null) return [];
+
+    try {
+      final response = await http.get(
+        Uri.parse('http://localhost:3000/categorias'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (e) {
+      print('Erro ao buscar categorias: $e');
+    }
+    return [];
+  }
+
   // Alternar agenda aberta/fechada no aplicativo
   Future<bool> atualizarStatusAgenda(bool agendaDisponivel) async {
     final token = await _authService.getToken();
