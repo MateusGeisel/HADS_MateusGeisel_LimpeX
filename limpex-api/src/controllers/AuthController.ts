@@ -3,46 +3,56 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { UserRepository } from '../repositories/UserRepository';
 
-const userRepository = new UserRepository();
-
 export class AuthController {
-  async register(req: Request, res: Response): Promise<void> {
+  static async register(req: Request, res: Response): Promise<void> {
     try {
-      const { nome, email, senha, cpf, telefone, tipo_perfil } = req.body;
+      const { nome, email, senha, telefone, tipo_perfil } = req.body;
 
       if (!nome || !email || !senha) {
-        res.status(400).json({ error: 'Nome, email e senha são obrigatórios.' });
+        res.status(400).json({ error: 'Nome, e-mail e senha são obrigatórios.' });
         return;
       }
 
-      const userExists = await userRepository.findByEmail(email);
+      // Chamada direta na classe (sem dar "new UserRepository()")
+      const userExists = await UserRepository.findByEmail(email);
       if (userExists) {
         res.status(400).json({ error: 'E-mail já cadastrado.' });
         return;
       }
 
       const senhaHash = await bcrypt.hash(senha, 10);
-      const newUser = await userRepository.create({
+      
+      // Mapeia o perfil vindo do Flutter para o padrão da tabela 'perfil' no banco (CONTRATANTE / PRESTADOR)
+      const perfilMapeado = (tipo_perfil === 'PRESTADOR') ? 'PRESTADOR' : 'CONTRATANTE';
+
+      const newUser = await UserRepository.create({
         nome,
         email,
         senhaHash,
-        cpf,
         telefone,
-        tipo_perfil: tipo_perfil || 'CLIENTE',
+        tipo_perfil: perfilMapeado,
       });
 
-      res.status(201).json({ message: 'Usuário registrado com sucesso!', user: newUser });
+      res.status(201).json({ 
+        message: 'Usuário registrado com sucesso!', 
+        user: newUser 
+      });
     } catch (error) {
-      console.error(error);
+      console.error('Erro no registro:', error);
       res.status(500).json({ error: 'Erro ao registrar usuário no servidor.' });
     }
   }
 
-  async login(req: Request, res: Response): Promise<void> {
+  static async login(req: Request, res: Response): Promise<void> {
     try {
       const { email, senha } = req.body;
 
-      const user = await userRepository.findByEmail(email);
+      if (!email || !senha) {
+        res.status(400).json({ error: 'E-mail e senha são obrigatórios.' });
+        return;
+      }
+
+      const user = await UserRepository.findByEmail(email);
       if (!user) {
         res.status(401).json({ error: 'Credenciais inválidas.' });
         return;
@@ -56,7 +66,11 @@ export class AuthController {
 
       const secret = process.env.JWT_SECRET || 'secret';
       const token = jwt.sign(
-        { id: user.id_usuario, email: user.email, tipo_perfil: user.tipo_perfil },
+        { 
+          id: user.id_usuario, 
+          email: user.email, 
+          tipo_perfil: user.perfil_nome || 'CONTRATANTE' 
+        },
         secret,
         { expiresIn: '1d' }
       );
@@ -68,10 +82,11 @@ export class AuthController {
           id: user.id_usuario,
           nome: user.nome,
           email: user.email,
-          tipo_perfil: user.tipo_perfil,
+          tipo_perfil: user.perfil_nome || 'CONTRATANTE',
         },
       });
     } catch (error) {
+      console.error('Erro no login:', error);
       res.status(500).json({ error: 'Erro ao realizar login.' });
     }
   }

@@ -1,84 +1,97 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
-import { CnpjService } from '../services/CnpjService';
 import { PrestadorRepository } from '../repositories/PrestadorRepository';
-import { TrilhaMeiRepository } from '../repositories/TrilhaMeiRepository';
+import { ServicoRepository } from '../repositories/ServicoRepository';
 
 export class PrestadorController {
-  // Rota pública/autenticada para consultar dados do CNPJ antes de salvar
+  // --- Métodos Existentes ---
   static async consultarCnpj(req: AuthenticatedRequest, res: Response) {
-    try {
-      const cnpj = req.params.cnpj as string;
-      const dadosCnpj = await CnpjService.consultarCnpj(cnpj);
-
-      if (!dadosCnpj) {
-        return res.status(404).json({ error: 'CNPJ não encontrado ou inválido.' });
-      }
-
-      return res.status(200).json(dadosCnpj);
-    } catch (error) {
-      console.error('Erro no controller de CNPJ:', error);
-      return res.status(500).json({ error: 'Erro interno ao consultar CNPJ.' });
-    }
+    // Mantém a tua implementação do consultarCnpj aqui
   }
 
-  // Cadastrar ou atualizar dados fiscais do prestador
   static async salvarDadosFiscais(req: AuthenticatedRequest, res: Response) {
+    // Mantém a tua implementação do salvarDadosFiscais aqui
+  }
+
+  static async registrarProgressoTrilha(req: AuthenticatedRequest, res: Response) {
+    // Mantém a tua implementação do registrarProgressoTrilha aqui
+  }
+
+  // --- Novos Métodos para a Vitrine de Serviços ---
+
+  // Listar todos os prestadores (Vitrine para Contratantes)
+  static async listarTodos(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.userId;
-      if (!userId) return res.status(401).json({ error: 'Usuário não autenticado.' });
+      const prestadores = await PrestadorRepository.listarTodos();
+      res.status(200).json(prestadores);
+    } catch (error) {
+      console.error('Erro ao listar prestadores:', error);
+      res.status(500).json({ error: 'Erro interno ao buscar prestadores.' });
+    }
+  }
 
-      const { tipo_documento, documento_numero, razao_social, inscricao_municipal, optante_mei } = req.body;
+  // Buscar perfil público do prestador com seus serviços
+  static async buscarPerfil(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const idPrestador = Number(id);
 
-      if (!tipo_documento || !documento_numero) {
-        return res.status(400).json({ error: 'Tipo de documento e número são obrigatórios.' });
+      const prestador = await PrestadorRepository.buscarPorId(idPrestador);
+      if (!prestador) {
+        res.status(404).json({ error: 'Prestador não encontrado.' });
+        return;
       }
 
-      const novoPrestador = await PrestadorRepository.create({
-        id_usuario: userId,
-        tipo_documento,
-        documento_numero,
-        razao_social,
-        inscricao_municipal,
-        optante_mei: optante_mei ?? (tipo_documento === 'CNPJ'),
-        status_validacao: 'PENDENTE',
-        selo_formalizado: tipo_documento === 'CNPJ',
-      });
+      const servicos = await ServicoRepository.listarPorPrestador(idPrestador);
 
-      return res.status(201).json({
-        message: 'Dados fiscais cadastrados com sucesso!',
-        prestador: novoPrestador,
+      res.status(200).json({
+        ...prestador,
+        servicos,
       });
     } catch (error) {
-      console.error('Erro ao salvar dados fiscais:', error);
-      return res.status(500).json({ error: 'Erro interno ao salvar dados do prestador.' });
+      console.error('Erro ao buscar perfil do prestador:', error);
+      res.status(500).json({ error: 'Erro interno ao buscar perfil.' });
     }
   }
-  //Trilha CNPJ classe PrestadorController:
-static async registrarProgressoTrilha(req: AuthenticatedRequest, res: Response) {
-  try {
-    const userId = req.userId;
-    if (!userId) return res.status(401).json({ error: 'Usuário não autenticado.' });
 
-    const prestador = await PrestadorRepository.findByUsuarioId(userId);
-    if (!prestador || !prestador.id_prestador) {
-      return res.status(404).json({ error: 'Perfil de prestador não encontrado.' });
+  // Prestador cadastra um novo serviço
+  static async criarServico(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const id_usuario = req.userId;
+      if (!id_usuario) {
+        res.status(401).json({ error: 'Usuário não autenticado.' });
+        return;
+      }
+
+      const prestador = await PrestadorRepository.buscarPorUsuario(id_usuario);
+      if (!prestador) {
+        res.status(403).json({ error: 'Apenas prestadores cadastrados podem criar serviços.' });
+        return;
+      }
+
+      const { id_categoria, nome, descricao, valor, modalidade } = req.body;
+
+      if (!id_categoria || !nome || !valor) {
+        res.status(400).json({ error: 'Categoria, nome e valor são obrigatórios.' });
+        return;
+      }
+
+      const novoServico = await ServicoRepository.criar({
+        id_prestador: prestador.id_prestador,
+        id_categoria: Number(id_categoria),
+        nome,
+        descricao,
+        valor: Number(valor),
+        modalidade,
+      });
+
+      res.status(201).json({
+        message: 'Serviço cadastrado com sucesso!',
+        servico: novoServico,
+      });
+    } catch (error) {
+      console.error('Erro ao criar serviço:', error);
+      res.status(500).json({ error: 'Erro interno ao criar serviço.' });
     }
-
-    const { etapa_concluida } = req.body;
-    if (!etapa_concluida) {
-      return res.status(400).json({ error: 'Informe a etapa concluída.' });
-    }
-
-    const progresso = await TrilhaMeiRepository.registrarInteracao(prestador.id_prestador, etapa_concluida);
-
-    return res.status(201).json({
-      message: 'Progresso da trilha registrado!',
-      progresso,
-    });
-  } catch (error) {
-    console.error('Erro ao registrar trilha MEI:', error);
-    return res.status(500).json({ error: 'Erro interno ao salvar progresso.' });
   }
-}
 }

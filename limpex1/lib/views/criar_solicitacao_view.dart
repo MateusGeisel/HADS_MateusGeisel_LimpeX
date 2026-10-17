@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+
 import '../services/solicitacao_service.dart';
 
 class CriarSolicitacaoView extends StatefulWidget {
-  const CriarSolicitacaoView({Key? key}) : super(key: key);
+  const CriarSolicitacaoView({super.key});
 
   @override
   State<CriarSolicitacaoView> createState() => _CriarSolicitacaoViewState();
@@ -18,7 +19,7 @@ class _CriarSolicitacaoViewState extends State<CriarSolicitacaoView> {
 
   // Valores mocados de ID para teste inicial (serão dinâmicos com a busca de endereços e categorias)
   int _idCategoriaSelecionada = 1; // Ex: 1 = Limpeza Residencial
-  int _idEnderecoSelecionado = 1;  // ID do endereço cadastrado
+  final int _idEnderecoSelecionado = 1; // ID do endereço cadastrado
 
   bool _carregando = false;
 
@@ -41,12 +42,18 @@ class _CriarSolicitacaoViewState extends State<CriarSolicitacaoView> {
 
     if (sucesso) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Solicitação criada com sucesso!'), backgroundColor: Colors.green),
+        const SnackBar(
+          content: Text('Solicitação criada com sucesso!'),
+          backgroundColor: Colors.green,
+        ),
       );
       Navigator.pop(context, true); // Retorna true para atualizar a Home
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erro ao criar solicitação. Verifique os dados.'), backgroundColor: Colors.red),
+        const SnackBar(
+          content: Text('Erro ao criar solicitação. Verifique os dados.'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -68,14 +75,25 @@ class _CriarSolicitacaoViewState extends State<CriarSolicitacaoView> {
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<int>(
-                value: _idCategoriaSelecionada,
+                initialValue: _idCategoriaSelecionada,
                 items: const [
-                  DropdownMenuItem(value: 1, child: Text('Limpeza Residencial Padrao')),
-                  DropdownMenuItem(value: 2, child: Text('Limpeza Pesada / Pos-Obra')),
-                  DropdownMenuItem(value: 3, child: Text('Passadoria de Roupas')),
+                  DropdownMenuItem(
+                    value: 1,
+                    child: Text('Limpeza Residencial Padrao'),
+                  ),
+                  DropdownMenuItem(
+                    value: 2,
+                    child: Text('Limpeza Pesada / Pos-Obra'),
+                  ),
+                  DropdownMenuItem(
+                    value: 3,
+                    child: Text('Passadoria de Roupas'),
+                  ),
                 ],
                 onChanged: (value) {
-                  if (value != null) setState(() => _idCategoriaSelecionada = value);
+                  if (value != null) {
+                    setState(() => _idCategoriaSelecionada = value);
+                  }
                 },
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
@@ -96,7 +114,8 @@ class _CriarSolicitacaoViewState extends State<CriarSolicitacaoView> {
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.calendar_today),
                 ),
-                validator: (val) => val == null || val.isEmpty ? 'Informe a data' : null,
+                validator: (val) =>
+                    val == null || val.isEmpty ? 'Informe a data' : null,
               ),
               const SizedBox(height: 16),
 
@@ -112,7 +131,8 @@ class _CriarSolicitacaoViewState extends State<CriarSolicitacaoView> {
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.access_time),
                 ),
-                validator: (val) => val == null || val.isEmpty ? 'Informe o horário' : null,
+                validator: (val) =>
+                    val == null || val.isEmpty ? 'Informe o horário' : null,
               ),
               const SizedBox(height: 16),
 
@@ -128,7 +148,9 @@ class _CriarSolicitacaoViewState extends State<CriarSolicitacaoView> {
                   hintText: 'Ex: Apartamento 2 quartos, dar atenção especial para a cozinha...',
                   border: OutlineInputBorder(),
                 ),
-                validator: (val) => val == null || val.isEmpty ? 'Descreva o que precisa' : null,
+                validator: (val) => val == null || val.isEmpty
+                    ? 'Descreva o que precisa'
+                    : null,
               ),
               const SizedBox(height: 24),
 
@@ -136,11 +158,17 @@ class _CriarSolicitacaoViewState extends State<CriarSolicitacaoView> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                  ),
                   onPressed: _carregando ? null : _enviarSolicitacao,
                   child: _carregando
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text('Confirmar Solicitação', style: TextStyle(fontSize: 16)),
+                      : const Text(
+                          'Confirmar Solicitação',
+                          style: TextStyle(fontSize: 16),
+                        ),
                 ),
               ),
             ],

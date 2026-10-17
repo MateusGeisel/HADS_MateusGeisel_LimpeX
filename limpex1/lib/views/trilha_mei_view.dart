@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/prestador_service.dart';
 
 class TrilhaMeiView extends StatefulWidget {
-  const TrilhaMeiView({Key? key}) : super(key: key);
+  const TrilhaMeiView({super.key});
 
   @override
   State<TrilhaMeiView> createState() => _TrilhaMeiViewState();

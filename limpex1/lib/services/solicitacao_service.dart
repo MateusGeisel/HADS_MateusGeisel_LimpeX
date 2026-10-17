@@ -59,4 +59,42 @@ class SolicitacaoService {
     }
     return [];
   }
+
+  // Novo: Buscar solicitações abertas (Feed do Prestador)
+  Future<List<dynamic>> buscarSolicitacoesDisponiveis() async {
+    final token = await _authService.getToken();
+    if (token == null) return [];
+
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/disponiveis'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (e) {
+      print('Erro ao buscar solicitações disponíveis: $e');
+    }
+    return [];
+  }
+
+  // Novo: Aceitar uma solicitação
+  Future<bool> aceitarSolicitacao(int idSolicitacao) async {
+    final token = await _authService.getToken();
+    if (token == null) return false;
+
+    try {
+      final response = await http.patch(
+        Uri.parse('$baseUrl/$idSolicitacao/aceitar'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Erro ao aceitar solicitação: $e');
+      return false;
+    }
+  }
 }

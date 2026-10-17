@@ -1,50 +1,70 @@
 import { pool } from '../config/database';
 
 export class UserRepository {
-  async findByEmail(email: string) {
-    const result = await pool.query('SELECT * FROM usuario WHERE email = $1', [email]);
+  static async findByEmail(email: string) {
+    const query = `
+      SELECT u.*, p.nome as perfil_nome 
+      FROM usuario u
+      LEFT JOIN usuario_perfil up ON u.id_usuario = up.id_usuario
+      LEFT JOIN perfil p ON up.id_perfil = p.id_perfil
+      WHERE u.email = $1;
+    `;
+    const result = await pool.query(query, [email]);
     return result.rows[0];
   }
 
-  async create(data: {
+  static async create(data: {
     nome: string;
     email: string;
     senhaHash: string;
-    cpf?: string;
     telefone?: string;
-    tipo_perfil: 'CLIENTE' | 'PRESTADOR' | 'AMBOS';
+    tipo_perfil: 'CONTRATANTE' | 'PRESTADOR';
   }) {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
 
-      // Inserção na tabela de Usuário
+      // 1. Cria o usuário central
       const userResult = await client.query(
-        `INSERT INTO usuario (nome, email, senha, cpf, telefone, tipo_perfil) 
-         VALUES ($1, $2, $3, $4, $5, $6) 
-         RETURNING id_usuario, nome, email, tipo_perfil, telefone`,
-        [
-          data.nome,
-          data.email,
-          data.senhaHash,
-          data.cpf || null,
-          data.telefone || null,
-          data.tipo_perfil,
-        ]
+        `INSERT INTO usuario (nome, email, senha, telefone) 
+         VALUES ($1, $2, $3, $4) 
+         RETURNING id_usuario, nome, email, telefone`,
+        [data.nome, data.email, data.senhaHash, data.telefone || null]
       );
 
       const newUser = userResult.rows[0];
 
-      // Se for PRESTADOR, cria o perfil básico de prestador
-      if (data.tipo_perfil === 'PRESTADOR' || data.tipo_perfil === 'AMBOS') {
+      // 2. Busca ou garante o ID do Perfil
+      let perfilResult = await client.query(
+        `SELECT id_perfil FROM perfil WHERE nome = $1`,
+        [data.tipo_perfil]
+      );
+
+      if (perfilResult.rows.length === 0) {
+        perfilResult = await client.query(
+          `INSERT INTO perfil (nome) VALUES ($1) RETURNING id_perfil`,
+          [data.tipo_perfil]
+        );
+      }
+
+      const idPerfil = perfilResult.rows[0].id_perfil;
+
+      // 3. Vincula Usuário ao Perfil
+      await client.query(
+        `INSERT INTO usuario_perfil (id_usuario, id_perfil) VALUES ($1, $2)`,
+        [newUser.id_usuario, idPerfil]
+      );
+
+      // 4. Se for PRESTADOR, cria o registro inicial na tabela prestador
+      if (data.tipo_perfil === 'PRESTADOR') {
         await client.query(
-          `INSERT INTO perfil_prestador (id_usuario) VALUES ($1)`,
-          [newUser.id_usuario]
+          `INSERT INTO prestador (id_usuario, documento_numero) VALUES ($1, $2)`,
+          [newUser.id_usuario, `PENDENTE_${newUser.id_usuario}`]
         );
       }
 
       await client.query('COMMIT');
-      return newUser;
+      return { ...newUser, tipo_perfil: data.tipo_perfil };
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;

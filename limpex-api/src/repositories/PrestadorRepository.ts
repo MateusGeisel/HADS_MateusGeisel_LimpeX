@@ -1,46 +1,67 @@
 import { pool } from '../config/database';
 
-export interface PrestadorDTO {
-  id_prestador?: number;
-  id_usuario: number;
-  tipo_documento: 'CPF' | 'CNPJ';
-  documento_numero: string;
-  razao_social?: string;
-  inscricao_municipal?: string;
-  optante_mei?: boolean;
-  status_validacao?: 'PENDENTE' | 'APROVADO' | 'RECUSADO';
-  selo_formalizado?: boolean;
-}
-
 export class PrestadorRepository {
-  static async create(prestador: PrestadorDTO): Promise<PrestadorDTO> {
+  // Listar prestadores para o catálogo do cliente
+  static async listarTodos() {
     const query = `
-      INSERT INTO prestador (
-        id_usuario, tipo_documento, documento_numero, razao_social, 
-        inscricao_municipal, optante_mei, status_validacao, selo_formalizado
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING *;
+      SELECT 
+        p.id_prestador,
+        p.selo_formalizado,
+        p.optante_mei,
+        p.status_validacao,
+        u.id_usuario,
+        u.nome,
+        u.foto_perfil,
+        u.telefone,
+        l.cidade,
+        l.bairro,
+        COALESCE(AVG(a.nota), 5.0)::NUMERIC(2,1) as media_nota,
+        COUNT(a.id_avaliacao) as total_avaliacoes
+      FROM prestador p
+      JOIN usuario u ON p.id_usuario = u.id_usuario
+      LEFT JOIN localizacao l ON u.id_localizacao = l.id_localizacao
+      LEFT JOIN avaliacao a ON a.id_avaliado = u.id_usuario
+      WHERE u.status_conta = 'ATIVO'
+      GROUP BY p.id_prestador, u.id_usuario, l.cidade, l.bairro
+      ORDER BY p.selo_formalizado DESC, media_nota DESC;
     `;
+    const result = await pool.query(query);
+    return result.rows;
+  }
 
-    const values = [
-      prestador.id_usuario,
-      prestador.tipo_documento,
-      prestador.documento_numero,
-      prestador.razao_social || null,
-      prestador.inscricao_municipal || null,
-      prestador.optante_mei ?? false,
-      prestador.status_validacao || 'PENDENTE',
-      prestador.selo_formalizado ?? (prestador.tipo_documento === 'CNPJ'),
-    ];
-
-    const result = await pool.query(query, values);
+  // Buscar detalhes do perfil de um prestador pelo ID
+  static async buscarPorId(id_prestador: number) {
+    const query = `
+      SELECT 
+        p.id_prestador,
+        p.selo_formalizado,
+        p.optante_mei,
+        p.razao_social,
+        p.status_validacao,
+        u.id_usuario,
+        u.nome,
+        u.email,
+        u.telefone,
+        u.foto_perfil,
+        l.cidade,
+        l.bairro,
+        COALESCE(AVG(a.nota), 5.0)::NUMERIC(2,1) as media_nota,
+        COUNT(a.id_avaliacao) as total_avaliacoes
+      FROM prestador p
+      JOIN usuario u ON p.id_usuario = u.id_usuario
+      LEFT JOIN localizacao l ON u.id_localizacao = l.id_localizacao
+      LEFT JOIN avaliacao a ON a.id_avaliado = u.id_usuario
+      WHERE p.id_prestador = $1
+      GROUP BY p.id_prestador, u.id_usuario, l.cidade, l.bairro;
+    `;
+    const result = await pool.query(query, [id_prestador]);
     return result.rows[0];
   }
 
-  static async findByUsuarioId(id_usuario: number): Promise<PrestadorDTO | null> {
-    const query = `SELECT * FROM prestador WHERE id_usuario = $1;`;
+  // Buscar ID do prestador a partir do ID do usuário autenticado
+  static async buscarPorUsuario(id_usuario: number) {
+    const query = `SELECT id_prestador FROM prestador WHERE id_usuario = $1;`;
     const result = await pool.query(query, [id_usuario]);
-    return result.rows[0] || null;
+    return result.rows[0];
   }
 }

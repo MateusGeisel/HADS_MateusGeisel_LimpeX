@@ -3,8 +3,13 @@ import 'package:http/http.dart' as http;
 import 'auth_service.dart';
 
 class PrestadorService {
-  static const String baseUrl = 'http://localhost:3000/prestador';
+  // Ajustado para 'prestadores' (plural) para casar com o prestadorRoutes.ts do backend
+  static const String baseUrl = 'http://localhost:3000/prestadores';
   final AuthService _authService = AuthService();
+
+  // ==========================================
+  // FUNCIONALIDADES EXISTENTES (MEI / FISCAL)
+  // ==========================================
 
   // Buscar dados cadastrais do CNPJ via Backend (BrasilAPI)
   Future<Map<String, dynamic>?> consultarCnpj(String cnpj) async {
@@ -81,6 +86,84 @@ class PrestadorService {
       return response.statusCode == 201;
     } catch (e) {
       print('Erro ao registrar progresso MEI: $e');
+      return false;
+    }
+  }
+
+  // ==========================================
+  // NOVAS FUNCIONALIDADES (VITRINE & SERVIÇOS)
+  // ==========================================
+
+  // Listar todos os prestadores para a Vitrine/Catálogo do Contratante
+  Future<List<dynamic>> listarPrestadores() async {
+    final token = await _authService.getToken();
+    if (token == null) return [];
+
+    try {
+      final response = await http.get(
+        Uri.parse(baseUrl),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (e) {
+      print('Erro ao listar prestadores: $e');
+    }
+    return [];
+  }
+
+  // Buscar perfil detalhado do prestador e a lista dos seus serviços ofertados
+  Future<Map<String, dynamic>?> buscarPerfilPrestador(int idPrestador) async {
+    final token = await _authService.getToken();
+    if (token == null) return null;
+
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/$idPrestador'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (e) {
+      print('Erro ao buscar perfil do prestador: $e');
+    }
+    return null;
+  }
+
+  // Prestador cadastrar um novo serviço para exibir no seu perfil
+  Future<bool> criarServico({
+    required int idCategoria,
+    required String nome,
+    String? descricao,
+    required double valor,
+    String modalidade = 'DOMICILIO',
+  }) async {
+    final token = await _authService.getToken();
+    if (token == null) return false;
+
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/servicos'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'id_categoria': idCategoria,
+          'nome': nome,
+          'descricao': descricao,
+          'valor': valor,
+          'modalidade': modalidade,
+        }),
+      );
+
+      return response.statusCode == 201;
+    } catch (e) {
+      print('Erro ao criar serviço: $e');
       return false;
     }
   }

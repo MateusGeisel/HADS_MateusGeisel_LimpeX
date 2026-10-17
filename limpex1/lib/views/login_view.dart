@@ -4,7 +4,7 @@ import 'register_view.dart';
 import 'home_view.dart'; // Import da HomeView
 
 class LoginView extends StatefulWidget {
-  const LoginView({Key? key}) : super(key: key);
+  const LoginView({super.key});
 
   @override
   State<LoginView> createState() => _LoginViewState();

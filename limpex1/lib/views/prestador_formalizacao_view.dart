@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/prestador_service.dart';
 
 class PrestadorFormalizacaoView extends StatefulWidget {
-  const PrestadorFormalizacaoView({Key? key}) : super(key: key);
+  const PrestadorFormalizacaoView({super.key});
 
   @override
   State<PrestadorFormalizacaoView> createState() => _PrestadorFormalizacaoViewState();

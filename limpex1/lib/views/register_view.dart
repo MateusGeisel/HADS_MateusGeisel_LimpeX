@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../viewmodels/auth_viewmodel.dart';
 
 class RegisterView extends StatefulWidget {
-  const RegisterView({Key? key}) : super(key: key);
+  const RegisterView({super.key});
 
   @override
   State<RegisterView> createState() => _RegisterViewState();

@@ -3,7 +3,7 @@ import '../models/address_model.dart';
 import '../services/address_service.dart';
 
 class AddAddressView extends StatefulWidget {
-  const AddAddressView({Key? key}) : super(key: key);
+  const AddAddressView({super.key});
 
   @override
   State<AddAddressView> createState() => _AddAddressViewState();
