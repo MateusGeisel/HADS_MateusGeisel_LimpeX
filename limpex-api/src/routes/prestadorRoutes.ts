@@ -20,4 +20,8 @@ prestadorRouter.get('/:id', authMiddleware, PrestadorController.buscarPerfil);
 // Rotas do prestador para gerenciar seus serviços
 prestadorRouter.post('/servicos', authMiddleware, PrestadorController.criarServico);
 
+// Rota para listar serviços do prestador autenticado
+prestadorRouter.get('/servicos/meus', authMiddleware, PrestadorController.listarMeusServicos);
+prestadorRouter.patch('/agenda', authMiddleware, PrestadorController.atualizarAgenda);
+
 export default prestadorRouter;

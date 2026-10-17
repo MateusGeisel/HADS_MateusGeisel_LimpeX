@@ -64,4 +64,16 @@ export class PrestadorRepository {
     const result = await pool.query(query, [id_usuario]);
     return result.rows[0];
   }
+
+  // Atualizar a disponibilidade da agenda do prestador
+  static async atualizarAgendaDisponivel(id_prestador: number, agendaDisponivel: boolean) {
+  const query = `
+    UPDATE prestador
+    SET agenda_disponivel = $1
+    WHERE id_prestador = $2
+    RETURNING *;
+  `;
+  const result = await pool.query(query, [agendaDisponivel, id_prestador]);
+  return result.rows[0];
+  }
 }

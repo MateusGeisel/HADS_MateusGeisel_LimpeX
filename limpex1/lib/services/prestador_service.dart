@@ -1,5 +1,7 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
+
 import 'auth_service.dart';
 
 class PrestadorService {
@@ -112,6 +114,84 @@ class PrestadorService {
       print('Erro ao listar prestadores: $e');
     }
     return [];
+  }
+
+  // Buscar serviços cadastrados do prestador logado
+  Future<List<dynamic>> listarMeusServicos() async {
+    final token = await _authService.getToken();
+    if (token == null) return [];
+
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/servicos/meus'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (e) {
+      print('Erro ao listar meus serviços: $e');
+    }
+    return [];
+  }
+
+  // Método de criação estendida com Fotos e Tipo de Cobrança
+  Future<bool> criarServicoExt({
+    required int idCategoria,
+    required String nome,
+    String? descricao,
+    required double valor,
+    String tipoCobranca = 'HORA',
+    List<String>? fotos,
+  }) async {
+    final token = await _authService.getToken();
+    if (token == null) return false;
+
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/servicos'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'id_categoria': idCategoria,
+          'nome': nome,
+          'descricao': descricao,
+          'valor': valor,
+          'tipo_cobranca': tipoCobranca,
+          'fotos': fotos ?? [],
+        }),
+      );
+
+      return response.statusCode == 201;
+    } catch (e) {
+      print('Erro ao criar serviço estendido: $e');
+      return false;
+    }
+  }
+
+  // Alternar agenda aberta/fechada no aplicativo
+  Future<bool> atualizarStatusAgenda(bool agendaDisponivel) async {
+    final token = await _authService.getToken();
+    if (token == null) return false;
+
+    try {
+      final response = await http.patch(
+        Uri.parse('$baseUrl/agenda'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'agenda_disponivel': agendaDisponivel}),
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Erro ao atualizar status da agenda: $e');
+      return false;
+    }
   }
 
   // Buscar perfil detalhado do prestador e a lista dos seus serviços ofertados

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../models/user_model.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../services/solicitacao_service.dart';
@@ -9,6 +10,7 @@ import 'prestador_formalizacao_view.dart';
 import 'trilha_mei_view.dart';
 import 'criar_solicitacao_view.dart';
 import 'perfil_prestador_view.dart';
+import 'meus_servicos_view.dart';
 
 class HomeView extends StatefulWidget {
   final UserModel user;
@@ -43,7 +45,8 @@ class _HomeViewState extends State<HomeView> {
         _carregando = false;
       });
     } else {
-      final listaSolicitacoes = await _solicitacaoService.buscarMinhasSolicitacoes();
+      final listaSolicitacoes = await _solicitacaoService
+          .buscarMinhasSolicitacoes();
       final listaPrestadores = await _prestadorService.listarPrestadores();
 
       setState(() {
@@ -84,7 +87,10 @@ class _HomeViewState extends State<HomeView> {
                 children: [
                   Text(
                     item['nome_categoria'] ?? 'Serviço de Limpeza',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   Chip(
                     label: Text(item['status'] ?? 'PENDENTE'),
@@ -105,8 +111,13 @@ class _HomeViewState extends State<HomeView> {
               const SizedBox(height: 4),
               Text('Data do Agendamento: ${item['data_agendamento']}'),
               const SizedBox(height: 8),
-              const Text('Observações:', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text(item['descricao_detalhada'] ?? 'Sem observações adicionais.'),
+              const Text(
+                'Observações:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              Text(
+                item['descricao_detalhada'] ?? 'Sem observações adicionais.',
+              ),
               const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
@@ -117,10 +128,14 @@ class _HomeViewState extends State<HomeView> {
                     foregroundColor: Colors.white,
                   ),
                   icon: const Icon(Icons.check_circle_outline),
-                  label: const Text('Aceitar Serviço', style: TextStyle(fontSize: 16)),
+                  label: const Text(
+                    'Aceitar Serviço',
+                    style: TextStyle(fontSize: 16),
+                  ),
                   onPressed: () async {
                     Navigator.pop(context);
-                    final sucesso = await _solicitacaoService.aceitarSolicitacao(item['id_solicitacao']);
+                    final sucesso = await _solicitacaoService
+                        .aceitarSolicitacao(item['id_solicitacao']);
                     if (!mounted) return;
                     if (sucesso) {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -154,7 +169,9 @@ class _HomeViewState extends State<HomeView> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('LimpeX - ${isPrestador ? "Painel do Prestador" : "Início"}'),
+        title: Text(
+          'LimpeX - ${isPrestador ? "Painel do Prestador" : "Início"}',
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -179,14 +196,18 @@ class _HomeViewState extends State<HomeView> {
               // Card de Boas-Vindas
               Card(
                 elevation: 2,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Row(
                     children: [
                       CircleAvatar(
                         radius: 28,
-                        backgroundColor: isPrestador ? Colors.orange : Colors.blue,
+                        backgroundColor: isPrestador
+                            ? Colors.orange
+                            : Colors.blue,
                         child: Icon(
                           isPrestador ? Icons.cleaning_services : Icons.person,
                           color: Colors.white,
@@ -209,8 +230,12 @@ class _HomeViewState extends State<HomeView> {
                                 ),
                                 if (isPrestador) ...[
                                   const SizedBox(width: 6),
-                                  const Icon(Icons.verified, color: Colors.blue, size: 20),
-                                ]
+                                  const Icon(
+                                    Icons.verified,
+                                    color: Colors.blue,
+                                    size: 20,
+                                  ),
+                                ],
                               ],
                             ),
                             const SizedBox(height: 4),
@@ -257,7 +282,9 @@ class _HomeViewState extends State<HomeView> {
             minimumSize: const Size(double.infinity, 50),
             backgroundColor: Colors.blue,
             foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
           ),
           onPressed: () async {
             final result = await Navigator.push(
@@ -269,13 +296,18 @@ class _HomeViewState extends State<HomeView> {
             }
           },
           icon: const Icon(Icons.add),
-          label: const Text('Solicitar Nova Limpeza', style: TextStyle(fontSize: 16)),
+          label: const Text(
+            'Solicitar Nova Limpeza',
+            style: TextStyle(fontSize: 16),
+          ),
         ),
         const SizedBox(height: 12),
         OutlinedButton.icon(
           style: OutlinedButton.styleFrom(
             minimumSize: const Size(double.infinity, 50),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
           ),
           onPressed: () {
             Navigator.push(
@@ -284,7 +316,10 @@ class _HomeViewState extends State<HomeView> {
             );
           },
           icon: const Icon(Icons.location_on_outlined),
-          label: const Text('Cadastrar Novo Endereço', style: TextStyle(fontSize: 16)),
+          label: const Text(
+            'Cadastrar Novo Endereço',
+            style: TextStyle(fontSize: 16),
+          ),
         ),
         const SizedBox(height: 24),
 
@@ -332,25 +367,38 @@ class _HomeViewState extends State<HomeView> {
                           children: [
                             CircleAvatar(
                               backgroundColor: Colors.orange.shade100,
-                              child: const Icon(Icons.person, color: Colors.orange),
+                              child: const Icon(
+                                Icons.person,
+                                color: Colors.orange,
+                              ),
                             ),
                             const SizedBox(height: 8),
                             Text(
                               item['nome'] ?? 'Prestador',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             const SizedBox(height: 4),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.star, color: Colors.amber, size: 14),
+                                const Icon(
+                                  Icons.star,
+                                  color: Colors.amber,
+                                  size: 14,
+                                ),
                                 Text(' ${item['media_nota']}'),
                                 if (item['selo_formalizado'] == true) ...[
                                   const SizedBox(width: 4),
-                                  const Icon(Icons.verified, color: Colors.blue, size: 14),
-                                ]
+                                  const Icon(
+                                    Icons.verified,
+                                    color: Colors.blue,
+                                    size: 14,
+                                  ),
+                                ],
                               ],
                             ),
                           ],
@@ -376,7 +424,9 @@ class _HomeViewState extends State<HomeView> {
             child: ListTile(
               leading: Icon(Icons.history, color: Colors.blue),
               title: Text('Nenhuma limpeza solicitada ainda.'),
-              subtitle: Text('Toque no botão acima para criar seu primeiro pedido.'),
+              subtitle: Text(
+                'Toque no botão acima para criar seu primeiro pedido.',
+              ),
             ),
           )
         else
@@ -389,7 +439,10 @@ class _HomeViewState extends State<HomeView> {
               return Card(
                 margin: const EdgeInsets.only(bottom: 8.0),
                 child: ListTile(
-                  leading: const Icon(Icons.cleaning_services, color: Colors.blue),
+                  leading: const Icon(
+                    Icons.cleaning_services,
+                    color: Colors.blue,
+                  ),
                   title: Text(item['nome_categoria'] ?? 'Limpeza'),
                   subtitle: Text(
                     'Data: ${item['data_agendamento']} | Status: ${item['status']}',
@@ -414,23 +467,55 @@ class _HomeViewState extends State<HomeView> {
             minimumSize: const Size(double.infinity, 50),
             backgroundColor: Colors.orange,
             foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
           ),
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const PrestadorFormalizacaoView()),
+              MaterialPageRoute(
+                builder: (_) => const PrestadorFormalizacaoView(),
+              ),
             );
           },
           icon: const Icon(Icons.verified),
-          label: const Text('Cadastrar CNPJ / Formalização MEI', style: TextStyle(fontSize: 16)),
+          label: const Text(
+            'Cadastrar CNPJ / Formalização MEI',
+            style: TextStyle(fontSize: 16),
+          ),
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 50),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MeusServicosView()),
+            );
+          },
+          icon: const Icon(
+            Icons.cleaning_services_outlined,
+            color: Colors.orange,
+          ),
+          label: const Text(
+            'Gerenciar Meus Serviços & Agenda',
+            style: TextStyle(fontSize: 16),
+          ),
         ),
         const SizedBox(height: 12),
         // Botão do Simulador e Trilha MEI
         OutlinedButton.icon(
           style: OutlinedButton.styleFrom(
             minimumSize: const Size(double.infinity, 50),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
           ),
           onPressed: () {
             Navigator.push(
@@ -439,7 +524,10 @@ class _HomeViewState extends State<HomeView> {
             );
           },
           icon: const Icon(Icons.school_outlined),
-          label: const Text('Conhecer Vantagens & Simulador MEI', style: TextStyle(fontSize: 16)),
+          label: const Text(
+            'Conhecer Vantagens & Simulador MEI',
+            style: TextStyle(fontSize: 16),
+          ),
         ),
         const SizedBox(height: 24),
         const Text(
@@ -454,7 +542,9 @@ class _HomeViewState extends State<HomeView> {
             child: ListTile(
               leading: Icon(Icons.work_outline, color: Colors.orange),
               title: Text('Nenhum serviço disponível no momento'),
-              subtitle: Text('Novas oportunidades de trabalho aparecerão aqui.'),
+              subtitle: Text(
+                'Novas oportunidades de trabalho aparecerão aqui.',
+              ),
             ),
           )
         else
@@ -499,7 +589,13 @@ class _HomeViewState extends State<HomeView> {
                   padding: EdgeInsets.all(16.0),
                   child: Column(
                     children: [
-                      Text('0', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                      Text(
+                        '0',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       SizedBox(height: 4),
                       Text('Concluídos', style: TextStyle(fontSize: 12)),
                     ],
@@ -514,7 +610,13 @@ class _HomeViewState extends State<HomeView> {
                   padding: EdgeInsets.all(16.0),
                   child: Column(
                     children: [
-                      Text('R\$ 0,00', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                      Text(
+                        'R\$ 0,00',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       SizedBox(height: 4),
                       Text('Ganhos', style: TextStyle(fontSize: 12)),
                     ],
