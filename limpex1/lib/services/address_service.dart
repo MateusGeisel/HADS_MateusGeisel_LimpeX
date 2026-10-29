@@ -4,7 +4,7 @@ import '../models/address_model.dart';
 import 'auth_service.dart';
 
 class AddressService {
-  static const String baseUrl = 'http://localhost:3000/address';
+  static const String baseUrl = 'https://hads-mateusgeisel-limpex.onrender.com';
   final AuthService _authService = AuthService();
 
   // Buscar dados de rua/bairro/cidade pelo ViaCEP

@@ -6,6 +6,7 @@ import authRoutes from './routes/authRoutes';
 import addressRouter from './routes/addressRoutes';
 import prestadorRouter from './routes/prestadorRoutes';
 import solicitacaoRouter from './routes/solicitacaoRoutes';
+import uploadRouter from './routes/uploadRoutes';
 
 dotenv.config();
 
@@ -47,3 +48,5 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor Limpex rodando na porta ${PORT}`);
 });
+// ... outras rotas
+app.use('/upload', uploadRouter); 

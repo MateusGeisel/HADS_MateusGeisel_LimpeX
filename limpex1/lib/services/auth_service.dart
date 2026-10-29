@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 
 class AuthService {
-  static const String baseUrl = 'http://localhost:3000/auth';
+  static const String baseUrl = 'https://hads-mateusgeisel-limpex.onrender.com';
 
   // Salvar Token e Dados do Usuário
   Future<void> saveSession(String token, UserModel user) async {
@@ -44,7 +44,7 @@ class AuthService {
     String tipoPerfil = 'CLIENTE',
   }) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/register'),
+      Uri.parse('$baseUrl/auth/register'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'nome': nome,
@@ -70,7 +70,7 @@ class AuthService {
     required String senha,
   }) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/login'),
+      Uri.parse('$baseUrl/auth/login'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'senha': senha}),
     );
