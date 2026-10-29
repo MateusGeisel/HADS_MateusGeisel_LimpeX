@@ -28,6 +28,7 @@ app.use('/auth', authRoutes);
 app.use('/address', addressRouter);
 app.use('/prestadores', prestadorRouter);
 app.use('/solicitacoes', solicitacaoRouter);
+app.use('/upload', uploadRouter);
 
 // Rota de Teste (Healthcheck)
 app.get('/health', async (req, res) => {
@@ -38,6 +39,7 @@ app.get('/health', async (req, res) => {
     res.status(500).json({ error: 'Erro ao conectar no banco de dados' });
   }
 });
+
 // Rota para listar categorias de serviços
 app.get('/categorias', async (req, res) => {
   const result = await pool.query('SELECT * FROM categoria_servico ORDER BY nome ASC');
@@ -48,5 +50,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor Limpex rodando na porta ${PORT}`);
 });
-// ... outras rotas
-app.use('/upload', uploadRouter); 

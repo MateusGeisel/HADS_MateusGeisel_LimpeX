@@ -1,12 +1,10 @@
 import 'dart:convert';
-
 import 'package:http/http.dart' as http;
-
 import 'auth_service.dart';
 
 class PrestadorService {
-  // Ajustado para 'prestadores' (plural) para casar com o prestadorRoutes.ts do backend
-  static const String baseUrl = 'https://hads-mateusgeisel-limpex.onrender.com';
+  // Ajustado com /prestadores no final para bater com o backend
+  static const String baseUrl = 'https://hads-mateusgeisel-limpex.onrender.com/prestadores';
   final AuthService _authService = AuthService();
 
   // ==========================================
