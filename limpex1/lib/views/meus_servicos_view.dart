@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/prestador_service.dart';
 import '../main.dart';
+import 'components/image_uploader_widget.dart';
 
 class MeusServicosView extends StatefulWidget {
   const MeusServicosView({super.key});
@@ -143,35 +144,26 @@ class _MeusServicosViewState extends State<MeusServicosView> {
                       const SizedBox(height: 16),
 
                       const Text(
-                        'URLs das Fotos do Serviço (Até 3 fotos)',
+                        'Fotos do Serviço (Até 3 fotos)',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
                         ),
                       ),
                       const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _foto1Controller,
-                        decoration: const InputDecoration(
-                          labelText: 'URL da Foto 1',
-                          prefixIcon: Icon(Icons.image_outlined),
-                        ),
+                      const Text('Foto 1'),
+                      ImageUploaderWidget(
+                        onImageUploaded: (url) => _foto1Controller.text = url,
                       ),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _foto2Controller,
-                        decoration: const InputDecoration(
-                          labelText: 'URL da Foto 2 (Opcional)',
-                          prefixIcon: Icon(Icons.image_outlined),
-                        ),
+                      const SizedBox(height: 12),
+                      const Text('Foto 2 (opcional)'),
+                      ImageUploaderWidget(
+                        onImageUploaded: (url) => _foto2Controller.text = url,
                       ),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _foto3Controller,
-                        decoration: const InputDecoration(
-                          labelText: 'URL da Foto 3 (Opcional)',
-                          prefixIcon: Icon(Icons.image_outlined),
-                        ),
+                      const SizedBox(height: 12),
+                      const Text('Foto 3 (opcional)'),
+                      ImageUploaderWidget(
+                        onImageUploaded: (url) => _foto3Controller.text = url,
                       ),
                       const SizedBox(height: 20),
 

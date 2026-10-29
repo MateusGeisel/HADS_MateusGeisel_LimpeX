@@ -6,7 +6,7 @@ import 'auth_service.dart';
 
 class PrestadorService {
   // Ajustado para 'prestadores' (plural) para casar com o prestadorRoutes.ts do backend
-  static const String baseUrl = 'http://localhost:3000/prestadores';
+  static const String baseUrl = 'https://hads-mateusgeisel-limpex.onrender.com';
   final AuthService _authService = AuthService();
 
   // ==========================================
@@ -179,7 +179,7 @@ class PrestadorService {
 
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:3000/categorias'),
+        Uri.parse('https://hads-mateusgeisel-limpex.onrender.com/categorias'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
