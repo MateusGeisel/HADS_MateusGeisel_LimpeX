@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'auth_service.dart';
 
 class SolicitacaoService {
-  static const String baseUrl = 'https://hads-mateusgeisel-limpex.onrender.com';
+  static const String baseUrl = 'https://hads-mateusgeisel-limpex.onrender.com/solicitacoes';
   final AuthService _authService = AuthService();
 
   // Criar nova solicitação de limpeza

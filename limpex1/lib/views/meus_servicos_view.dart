@@ -22,7 +22,8 @@ class _MeusServicosViewState extends State<MeusServicosView> {
   final _foto2Controller = TextEditingController();
   final _foto3Controller = TextEditingController();
 
-  final int _idCategoriaSelecionada = 1;
+  int? _idCategoriaSelecionada;
+  List<dynamic> _categorias = [];
   String _tipoCobranca = 'HORA';
   bool _agendaDisponivel = true;
   bool _carregando = false;
@@ -32,6 +33,35 @@ class _MeusServicosViewState extends State<MeusServicosView> {
   void initState() {
     super.initState();
     _carregarMeusServicos();
+    _carregarCategorias();
+  }
+
+  @override
+  void dispose() {
+    _nomeController.dispose();
+    _descricaoController.dispose();
+    _valorController.dispose();
+    _foto1Controller.dispose();
+    _foto2Controller.dispose();
+    _foto3Controller.dispose();
+    super.dispose();
+  }
+
+  int? _extrairIdCategoria(dynamic item) {
+    if (item == null) return null;
+    final rawId = item['id_categoria'] ?? item['id'];
+    if (rawId == null) return null;
+    return int.tryParse(rawId.toString());
+  }
+
+  Future<void> _carregarCategorias() async {
+    final cats = await _prestadorService.listarCategorias();
+    if (mounted && cats.isNotEmpty) {
+      setState(() {
+        _categorias = cats;
+        _idCategoriaSelecionada = _extrairIdCategoria(cats.first);
+      });
+    }
   }
 
   Future<void> _carregarMeusServicos() async {
@@ -45,7 +75,22 @@ class _MeusServicosViewState extends State<MeusServicosView> {
     }
   }
 
+  void _limparCampos() {
+    _nomeController.clear();
+    _descricaoController.clear();
+    _valorController.clear();
+    _foto1Controller.clear();
+    _foto2Controller.clear();
+    _foto3Controller.clear();
+    _tipoCobranca = 'HORA';
+    if (_categorias.isNotEmpty) {
+      _idCategoriaSelecionada = _extrairIdCategoria(_categorias.first);
+    }
+  }
+
   void _abrirModalCadastrarServico() {
+    bool salvando = false;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -78,13 +123,37 @@ class _MeusServicosViewState extends State<MeusServicosView> {
                       ),
                       const SizedBox(height: 16),
 
+                      DropdownButtonFormField<int>(
+                        isExpanded: true,
+                        value: _idCategoriaSelecionada,
+                        decoration: const InputDecoration(
+                          labelText: 'Categoria do Serviço',
+                        ),
+                        items: _categorias.map((cat) {
+                          final id = _extrairIdCategoria(cat);
+                          return DropdownMenuItem<int>(
+                            value: id,
+                            child: Text(cat['nome'] ?? 'Categoria'),
+                          );
+                        }).where((item) => item.value != null).toList(),
+                        validator: (v) =>
+                            v == null ? 'Selecione uma categoria' : null,
+                        onChanged: (val) {
+                          if (val != null) {
+                            setModalState(() => _idCategoriaSelecionada = val);
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 12),
+
                       TextFormField(
                         controller: _nomeController,
                         decoration: const InputDecoration(
-                          labelText: 'Nome do Serviço (ex: Limpeza Pesada)',
+                          labelText: 'Nome do Serviço (ex: Instalação de Torneira)',
                         ),
-                        validator: (v) =>
-                            v == null || v.isEmpty ? 'Informe o nome' : null,
+                        validator: (v) => v == null || v.trim().isEmpty
+                            ? 'Informe o nome do serviço'
+                            : null,
                       ),
                       const SizedBox(height: 12),
 
@@ -93,10 +162,10 @@ class _MeusServicosViewState extends State<MeusServicosView> {
                         maxLines: 3,
                         decoration: const InputDecoration(
                           labelText: 'Descrição / Diferenciais',
-                          hintText: 'Descreva seus diferenciais, capricho, experiência...',
+                          hintText: 'Descreva seus diferenciais, garantia do trabalho, experiência...',
                         ),
-                        validator: (v) => v == null || v.isEmpty
-                            ? 'Descreva seu serviço'
+                        validator: (v) => v == null || v.trim().isEmpty
+                            ? 'Descreva o serviço'
                             : null,
                       ),
                       const SizedBox(height: 12),
@@ -110,7 +179,7 @@ class _MeusServicosViewState extends State<MeusServicosView> {
                               decoration: const InputDecoration(
                                 labelText: 'Valor (R\$)',
                               ),
-                              validator: (v) => v == null || v.isEmpty
+                              validator: (v) => v == null || v.trim().isEmpty
                                   ? 'Informe o valor'
                                   : null,
                             ),
@@ -118,6 +187,7 @@ class _MeusServicosViewState extends State<MeusServicosView> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: DropdownButtonFormField<String>(
+                              isExpanded: true,
                               initialValue: _tipoCobranca,
                               decoration: const InputDecoration(
                                 labelText: 'Cobrança Por',
@@ -175,66 +245,75 @@ class _MeusServicosViewState extends State<MeusServicosView> {
                             backgroundColor: AppTheme.secondaryYellow,
                             foregroundColor: AppTheme.textPrimary,
                           ),
-                          onPressed: () async {
-                            if (!_formKey.currentState!.validate()) return;
+                          onPressed: salvando
+                              ? null
+                              : () async {
+                                  if (!_formKey.currentState!.validate()) return;
 
-                            List<String> fotos = [];
-                            if (_foto1Controller.text.isNotEmpty) {
-                              fotos.add(_foto1Controller.text.trim());
-                            }
-                            if (_foto2Controller.text.isNotEmpty) {
-                              fotos.add(_foto2Controller.text.trim());
-                            }
-                            if (_foto3Controller.text.isNotEmpty) {
-                              fotos.add(_foto3Controller.text.trim());
-                            }
+                                  setModalState(() => salvando = true);
 
-                            final sucesso = await _prestadorService
-                                .criarServicoExt(
-                                  idCategoria: _idCategoriaSelecionada,
-                                  nome: _nomeController.text.trim(),
-                                  descricao: _descricaoController.text.trim(),
-                                  valor:
-                                      double.tryParse(
-                                        _valorController.text.replaceAll(
-                                          ',',
-                                          '.',
-                                        ),
-                                      ) ??
-                                      0.0,
-                                  tipoCobranca: _tipoCobranca,
-                                  fotos: fotos,
-                                );
+                                  List<String> fotos = [];
+                                  if (_foto1Controller.text.isNotEmpty) {
+                                    fotos.add(_foto1Controller.text.trim());
+                                  }
+                                  if (_foto2Controller.text.isNotEmpty) {
+                                    fotos.add(_foto2Controller.text.trim());
+                                  }
+                                  if (_foto3Controller.text.isNotEmpty) {
+                                    fotos.add(_foto3Controller.text.trim());
+                                  }
 
-                            if (!mounted) return;
-                            Navigator.pop(context);
+                                  final sucesso = await _prestadorService.criarServicoExt(
+                                    idCategoria: _idCategoriaSelecionada ?? 1,
+                                    nome: _nomeController.text.trim(),
+                                    descricao: _descricaoController.text.trim(),
+                                    valor: double.tryParse(
+                                          _valorController.text.replaceAll(',', '.'),
+                                        ) ??
+                                        0.0,
+                                    tipoCobranca: _tipoCobranca,
+                                    fotos: fotos,
+                                  );
 
-                            if (sucesso) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Serviço cadastrado com sucesso!',
+                                  if (!mounted) return;
+
+                                  setModalState(() => salvando = false);
+
+                                  if (sucesso) {
+                                    Navigator.pop(context);
+                                    _limparCampos();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Serviço cadastrado com sucesso!'),
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
+                                    _carregarMeusServicos();
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Erro ao cadastrar serviço no servidor.'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                },
+                          child: salvando
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppTheme.textPrimary,
                                   ),
-                                  backgroundColor: Colors.green,
+                                )
+                              : const Text(
+                                  'Salvar Serviço',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                              );
-                              _carregarMeusServicos();
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Erro ao cadastrar serviço.'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          },
-                          child: const Text(
-                            'Salvar Serviço',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
                         ),
                       ),
                     ],
@@ -267,7 +346,6 @@ class _MeusServicosViewState extends State<MeusServicosView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Card de Configuração da Agenda
             Card(
               elevation: 2,
               shape: RoundedRectangleBorder(
