@@ -380,7 +380,10 @@ class _MeusServicosViewState extends State<MeusServicosView> {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
                                         content: Text(
-                                          editando
+                                          _prestadorService
+                                                  .ultimaFalhaAutenticacao
+                                              ? 'Sua sessão expirou. Entre novamente para continuar.'
+                                              : editando
                                               ? 'Erro ao atualizar serviço no servidor.'
                                               : 'Erro ao cadastrar serviço no servidor.',
                                         ),
@@ -450,6 +453,8 @@ class _MeusServicosViewState extends State<MeusServicosView> {
         content: Text(
           sucesso
               ? 'Serviço excluído com sucesso.'
+              : _prestadorService.ultimaFalhaAutenticacao
+              ? 'Sua sessão expirou. Entre novamente para continuar.'
               : 'Não foi possível excluir o serviço.',
         ),
         backgroundColor: sucesso ? Colors.green : Colors.red,

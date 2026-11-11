@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { getJwtSecret } from '../config/jwt';
 import { UserRepository } from '../repositories/UserRepository';
 
 export class AuthController {
@@ -64,14 +65,13 @@ export class AuthController {
         return;
       }
 
-      const secret = process.env.JWT_SECRET || 'secret';
       const token = jwt.sign(
         { 
           id: user.id_usuario, 
           email: user.email, 
           tipo_perfil: user.perfil_nome || 'CONTRATANTE' 
         },
-        secret,
+        getJwtSecret(),
         { expiresIn: '1d' }
       );
 

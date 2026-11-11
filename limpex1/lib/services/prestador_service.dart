@@ -10,6 +10,13 @@ class PrestadorService {
   static const String baseUrl =
       'https://hads-mateusgeisel-limpex.onrender.com/prestadores';
   final AuthService _authService = AuthService();
+  bool ultimaFalhaAutenticacao = false;
+
+  Map<String, String> _headersAutenticados(String token, {bool json = false}) =>
+      {
+        if (json) 'Content-Type': 'application/json',
+        'Authorization': 'Bearer ${token.trim()}',
+      };
 
   static List<String> extrairFotos(dynamic fotos) {
     dynamic valores = fotos;
@@ -226,16 +233,17 @@ class PrestadorService {
     required String tipoCobranca,
     required List<String> fotos,
   }) async {
+    ultimaFalhaAutenticacao = false;
     final token = await _authService.getToken();
-    if (token == null) return false;
+    if (token == null || token.trim().isEmpty) {
+      ultimaFalhaAutenticacao = true;
+      return false;
+    }
 
     try {
       final response = await http.put(
         Uri.parse('$baseUrl/servicos/$idServico'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': '******',
-        },
+        headers: _headersAutenticados(token, json: true),
         body: jsonEncode({
           'id_categoria': idCategoria,
           'nome': nome,
@@ -245,6 +253,11 @@ class PrestadorService {
           'fotos': fotos,
         }),
       );
+      if (response.statusCode == 401) {
+        ultimaFalhaAutenticacao = true;
+        await _authService.clearSession();
+        debugPrint('Sessão rejeitada ao atualizar serviço: ${response.body}');
+      }
       return response.statusCode == 200;
     } catch (e) {
       debugPrint('Erro ao atualizar serviço: $e');
@@ -253,14 +266,23 @@ class PrestadorService {
   }
 
   Future<bool> excluirServico(int idServico) async {
+    ultimaFalhaAutenticacao = false;
     final token = await _authService.getToken();
-    if (token == null) return false;
+    if (token == null || token.trim().isEmpty) {
+      ultimaFalhaAutenticacao = true;
+      return false;
+    }
 
     try {
       final response = await http.delete(
         Uri.parse('$baseUrl/servicos/$idServico'),
-        headers: {'Authorization': '******'},
+        headers: _headersAutenticados(token),
       );
+      if (response.statusCode == 401) {
+        ultimaFalhaAutenticacao = true;
+        await _authService.clearSession();
+        debugPrint('Sessão rejeitada ao excluir serviço: ${response.body}');
+      }
       return response.statusCode == 200;
     } catch (e) {
       debugPrint('Erro ao excluir serviço: $e');
