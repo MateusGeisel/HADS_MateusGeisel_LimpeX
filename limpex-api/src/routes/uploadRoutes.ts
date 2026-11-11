@@ -1,6 +1,9 @@
 import { Router } from 'express';
-import { upload } from '../middlewares/upload';
+import multer from 'multer';
 import { supabase } from '../config/supabase';
+
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
 const uploadRouter = Router();
 
@@ -12,16 +15,21 @@ uploadRouter.post('/', upload.single('imagem'), async (req, res) => {
     }
 
     const file = req.file;
-    const fileExt = file.originalname.split('.').pop();
+    const fileExt = file.originalname.split('.').pop()?.toLowerCase() || 'jpg';
     const fileName = `${Date.now()}.${fileExt}`;
 
-    console.log(`📤 Tentando subir imagem: ${fileName}`);
+    // Corrigindo o tipo do arquivo para o Supabase reconhecer como Imagem (evita application/octet-stream)
+    const mimeType = (file.mimetype && file.mimetype !== 'application/octet-stream')
+      ? file.mimetype
+      : `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`;
 
-    // Envia para o Supabase Storage
+    console.log(`📤 Tentando subir imagem: ${fileName} com o tipo ${mimeType}`);
+
+    // Envia o Buffer para o Supabase Storage
     const { error } = await supabase.storage
       .from('limpex-imagens')
       .upload(fileName, file.buffer, {
-        contentType: file.mimetype,
+        contentType: mimeType, // <--- Aqui garante que o Supabase entenda que é foto
         upsert: true,
       });
 
