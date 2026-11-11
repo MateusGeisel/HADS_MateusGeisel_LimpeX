@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../main.dart';
+import '../services/prestador_service.dart';
 import '../services/solicitacao_service.dart';
 
 class CriarSolicitacaoView extends StatefulWidget {
-  const CriarSolicitacaoView({super.key});
+  final Map<String, dynamic>? servico;
+
+  const CriarSolicitacaoView({super.key, this.servico});
 
   @override
   State<CriarSolicitacaoView> createState() => _CriarSolicitacaoViewState();
@@ -17,28 +21,53 @@ class _CriarSolicitacaoViewState extends State<CriarSolicitacaoView> {
   final _dataController = TextEditingController();
   final _horarioController = TextEditingController();
 
-  // Valores mocados de ID para teste inicial (serão dinâmicos com a busca de endereços e categorias)
-  int _idCategoriaSelecionada = 1; // Ex: 1 = Limpeza Residencial
+  int _idCategoriaSelecionada = 1;
   final int _idEnderecoSelecionado = 1; // ID do endereço cadastrado
 
   bool _carregando = false;
 
+  @override
+  void initState() {
+    super.initState();
+    _idCategoriaSelecionada =
+        int.tryParse(widget.servico?['id_categoria']?.toString() ?? '') ?? 1;
+  }
+
+  @override
+  void dispose() {
+    _descricaoController.dispose();
+    _dataController.dispose();
+    _horarioController.dispose();
+    super.dispose();
+  }
+
   void _enviarSolicitacao() async {
     if (!_formKey.currentState!.validate()) return;
+    final idServico = int.tryParse(
+      widget.servico?['id_servico']?.toString() ?? '',
+    );
+    if (widget.servico != null && idServico == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível identificar o serviço selecionado.'),
+        ),
+      );
+      return;
+    }
 
     setState(() => _carregando = true);
 
     final sucesso = await _solicitacaoService.criarSolicitacao(
       idEndereco: _idEnderecoSelecionado,
       idCategoria: _idCategoriaSelecionada,
+      idServico: idServico,
       descricaoDetalhada: _descricaoController.text,
       dataAgendamento: _dataController.text,
       horarioAgendamento: _horarioController.text,
     );
 
-    setState(() => _carregando = false);
-
     if (!mounted) return;
+    setState(() => _carregando = false);
 
     if (sucesso) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -60,6 +89,16 @@ class _CriarSolicitacaoViewState extends State<CriarSolicitacaoView> {
 
   @override
   Widget build(BuildContext context) {
+    final servico = widget.servico;
+    final fotos = servico == null
+        ? <String>[]
+        : PrestadorService.extrairFotos(
+            servico['fotos'] ??
+                servico['foto_url'] ??
+                servico['imagem_url'] ??
+                servico['imagens'],
+          );
+
     return Scaffold(
       appBar: AppBar(title: const Text('Solicitar Nova Limpeza')),
       body: SingleChildScrollView(
@@ -74,32 +113,91 @@ class _CriarSolicitacaoViewState extends State<CriarSolicitacaoView> {
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
               const SizedBox(height: 8),
-              DropdownButtonFormField<int>(
-                initialValue: _idCategoriaSelecionada,
-                items: const [
-                  DropdownMenuItem(
-                    value: 1,
-                    child: Text('Limpeza Residencial Padrao'),
+              if (servico != null) ...[
+                Card(
+                  clipBehavior: Clip.antiAlias,
+                  child: Row(
+                    children: [
+                      if (fotos.isNotEmpty)
+                        Image.network(
+                          fotos.first,
+                          width: 90,
+                          height: 90,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const SizedBox(
+                                width: 90,
+                                height: 90,
+                                child: Icon(Icons.broken_image_outlined),
+                              ),
+                        )
+                      else
+                        const SizedBox(
+                          width: 90,
+                          height: 90,
+                          child: Icon(Icons.image_not_supported_outlined),
+                        ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                servico['nome']?.toString() ?? 'Serviço',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'R\$ ${servico['valor'] ?? '—'}',
+                                style: TextStyle(
+                                  color: Colors.green.shade800,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  DropdownMenuItem(
-                    value: 2,
-                    child: Text('Limpeza Pesada / Pos-Obra'),
-                  ),
-                  DropdownMenuItem(
-                    value: 3,
-                    child: Text('Passadoria de Roupas'),
+                ),
+                if ((servico['descricao']?.toString() ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    servico['descricao'].toString(),
+                    style: const TextStyle(color: AppTheme.textSecondary),
                   ),
                 ],
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() => _idCategoriaSelecionada = value);
-                  }
-                },
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.cleaning_services),
+              ] else
+                DropdownButtonFormField<int>(
+                  initialValue: _idCategoriaSelecionada,
+                  items: const [
+                    DropdownMenuItem(
+                      value: 1,
+                      child: Text('Limpeza Residencial Padrao'),
+                    ),
+                    DropdownMenuItem(
+                      value: 2,
+                      child: Text('Limpeza Pesada / Pos-Obra'),
+                    ),
+                    DropdownMenuItem(
+                      value: 3,
+                      child: Text('Passadoria de Roupas'),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => _idCategoriaSelecionada = value);
+                    }
+                  },
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.cleaning_services),
+                  ),
                 ),
-              ),
               const SizedBox(height: 16),
 
               const Text(

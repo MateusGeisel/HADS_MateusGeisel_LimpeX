@@ -1,15 +1,19 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
+
 import 'auth_service.dart';
 
 class SolicitacaoService {
-  static const String baseUrl = 'https://hads-mateusgeisel-limpex.onrender.com/solicitacoes';
+  static const String baseUrl =
+      'https://hads-mateusgeisel-limpex.onrender.com/solicitacoes';
   final AuthService _authService = AuthService();
 
   // Criar nova solicitação de limpeza
   Future<bool> criarSolicitacao({
     required int idEndereco,
     required int idCategoria,
+    int? idServico,
     required String descricaoDetalhada,
     required String dataAgendamento,
     required String horarioAgendamento,
@@ -25,10 +29,16 @@ class SolicitacaoService {
           'Authorization': 'Bearer $token',
         },
         body: jsonEncode({
+          'id_servico': idServico,
+          'data_agendamento': dataAgendamento,
+          'observacoes': [
+            descricaoDetalhada,
+            if (horarioAgendamento.isNotEmpty)
+              'Horário preferido: $horarioAgendamento',
+          ].join('\n'),
           'id_endereco': idEndereco,
           'id_categoria': idCategoria,
           'descricao_detalhada': descricaoDetalhada,
-          'data_agendamento': dataAgendamento,
           'horario_agendamento': horarioAgendamento,
         }),
       );

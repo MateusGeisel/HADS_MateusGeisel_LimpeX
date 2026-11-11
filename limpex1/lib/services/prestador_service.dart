@@ -11,6 +11,47 @@ class PrestadorService {
       'https://hads-mateusgeisel-limpex.onrender.com/prestadores';
   final AuthService _authService = AuthService();
 
+  static List<String> extrairFotos(dynamic fotos) {
+    dynamic valores = fotos;
+    if (fotos is String) {
+      final texto = fotos.trim();
+      if (texto.isEmpty) return [];
+
+      if (texto.startsWith('[')) {
+        try {
+          valores = jsonDecode(texto);
+        } on FormatException {
+          return [];
+        }
+      } else if (texto.startsWith('{') && texto.endsWith('}')) {
+        valores = texto
+            .substring(1, texto.length - 1)
+            .split(',')
+            .map((valor) => valor.trim().replaceAll('"', ''))
+            .where((valor) => valor.isNotEmpty)
+            .toList();
+      } else {
+        valores = [texto];
+      }
+    }
+
+    if (valores is! List) return [];
+    return valores
+        .map((valor) {
+          if (valor is Map) {
+            return (valor['url'] ?? valor['publicUrl'] ?? '').toString();
+          }
+          return valor.toString();
+        })
+        .where((url) {
+          final uri = Uri.tryParse(url);
+          return uri != null &&
+              (uri.scheme == 'https' || uri.scheme == 'http') &&
+              uri.host.isNotEmpty;
+        })
+        .toList();
+  }
+
   // ==========================================
   // FUNCIONALIDADES EXISTENTES (MEI / FISCAL)
   // ==========================================

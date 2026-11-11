@@ -104,10 +104,12 @@ class _MeusServicosViewState extends State<MeusServicosView> {
     _tipoCobranca = ['HORA', 'TURNO', 'FIXO'].contains(tipoCobranca)
         ? tipoCobranca!
         : 'HORA';
-    final fotos = servico['fotos'];
-    final listaFotos = fotos is List
-        ? fotos.map((foto) => foto.toString()).toList()
-        : <String>[];
+    final listaFotos = PrestadorService.extrairFotos(
+      servico['fotos'] ??
+          servico['foto_url'] ??
+          servico['imagem_url'] ??
+          servico['imagens'],
+    );
     _foto1Controller.text = listaFotos.isNotEmpty ? listaFotos[0] : '';
     _foto2Controller.text = listaFotos.length > 1 ? listaFotos[1] : '';
     _foto3Controller.text = listaFotos.length > 2 ? listaFotos[2] : '';
@@ -532,10 +534,12 @@ class _MeusServicosViewState extends State<MeusServicosView> {
                 itemCount: _servicos.length,
                 itemBuilder: (context, index) {
                   final item = _servicos[index];
-                  final dynamic fotosData = item['fotos'];
-                  final List<dynamic> fotos = fotosData is List
-                      ? fotosData
-                      : [];
+                  final fotos = PrestadorService.extrairFotos(
+                    item['fotos'] ??
+                        item['foto_url'] ??
+                        item['imagem_url'] ??
+                        item['imagens'],
+                  );
 
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),

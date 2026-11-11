@@ -4,6 +4,8 @@ import '../services/prestador_service.dart';
 import '../services/auth_service.dart';
 import '../main.dart';
 import 'login_view.dart';
+import 'criar_solicitacao_view.dart';
+import 'servico_detalhe_view.dart';
 
 class PerfilPrestadorView extends StatefulWidget {
   final int idPrestador;
@@ -72,10 +74,27 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Serviço "${servico['nome']}" selecionado!'),
-        backgroundColor: Colors.green,
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => CriarSolicitacaoView(servico: servico)),
+    );
+  }
+
+  void _abrirDetalhesServico(
+    Map<String, dynamic> servico,
+    String nomePrestador,
+  ) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ServicoDetalheView(
+          servico: servico,
+          nomePrestador: nomePrestador,
+          onSolicitar: () {
+            Navigator.pop(context);
+            _solicitarServico(servico);
+          },
+        ),
       ),
     );
   }
@@ -248,119 +267,130 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
                 itemCount: servicos.length,
                 itemBuilder: (context, index) {
                   final item = servicos[index];
-                  final dynamic fotosData = item['fotos'];
-                  final List<dynamic> fotos = fotosData is List
-                      ? fotosData
-                      : [];
+                  final fotos = PrestadorService.extrairFotos(
+                    item['fotos'] ??
+                        item['foto_url'] ??
+                        item['imagem_url'] ??
+                        item['imagens'],
+                  );
 
                   return Card(
                     margin: const EdgeInsets.only(bottom: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  item['nome'] ?? 'Serviço',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: () => _abrirDetalhesServico(
+                        Map<String, dynamic>.from(item),
+                        prestador['nome']?.toString() ?? 'Prestador',
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (fotos.isNotEmpty) ...[
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.network(
+                                  fotos.first,
+                                  width: double.infinity,
+                                  height: 170,
+                                  fit: BoxFit.cover,
+                                  loadingBuilder: (context, child, progress) {
+                                    if (progress == null) return child;
+                                    return const SizedBox(
+                                      height: 170,
+                                      child: Center(
+                                        child: CircularProgressIndicator(),
+                                      ),
+                                    );
+                                  },
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Container(
+                                        height: 170,
+                                        color: Colors.grey.shade200,
+                                        child: const Center(
+                                          child: Icon(
+                                            Icons.broken_image_outlined,
+                                            size: 40,
+                                          ),
+                                        ),
+                                      ),
                                 ),
                               ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.shade50,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  'R\$ ${item['valor']} / ${item['tipo_cobranca'] == "TURNO"
-                                      ? "Turno"
-                                      : item['tipo_cobranca'] == "FIXO"
-                                      ? "Fixo"
-                                      : "Hora"}',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.green.shade800,
-                                    fontSize: 14,
+                              const SizedBox(height: 12),
+                            ],
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    item['nome'] ?? 'Serviço',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.shade50,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    'R\$ ${item['valor']} / ${item['tipo_cobranca'] == "TURNO"
+                                        ? "Turno"
+                                        : item['tipo_cobranca'] == "FIXO"
+                                        ? "Fixo"
+                                        : "Hora"}',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green.shade800,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (item['descricao'] != null &&
+                                item['descricao'].toString().isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                item['descricao'],
+                                style: const TextStyle(
+                                  color: AppTheme.textSecondary,
+                                  fontSize: 14,
                                 ),
                               ),
                             ],
-                          ),
-                          if (item['descricao'] != null &&
-                              item['descricao'].toString().isNotEmpty) ...[
-                            const SizedBox(height: 8),
-                            Text(
-                              item['descricao'],
-                              style: const TextStyle(
-                                color: AppTheme.textSecondary,
-                                fontSize: 14,
-                              ),
+                            const SizedBox(height: 14),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Text(
+                                  'Ver detalhes',
+                                  style: TextStyle(
+                                    color: AppTheme.primaryBlue,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(
+                                  Icons.arrow_forward,
+                                  size: 18,
+                                  color: AppTheme.primaryBlue,
+                                ),
+                              ],
                             ),
                           ],
-                          if (fotos.isNotEmpty) ...[
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              height: 75,
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: fotos.length,
-                                itemBuilder: (context, fIndex) {
-                                  return Container(
-                                    margin: const EdgeInsets.only(right: 8),
-                                    width: 75,
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(10),
-                                      child: Image.network(
-                                        fotos[fIndex].toString(),
-                                        width: 75,
-                                        height: 75,
-                                        fit: BoxFit.cover,
-                                        errorBuilder:
-                                            (context, error, stackTrace) =>
-                                                const Icon(
-                                                  Icons.broken_image_outlined,
-                                                ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 14),
-                          SizedBox(
-                            width: double.infinity,
-                            height: 44,
-                            child: ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.primaryBlue,
-                                foregroundColor: Colors.white,
-                              ),
-                              icon: const Icon(
-                                Icons.add_circle_outline,
-                                size: 18,
-                              ),
-                              label: const Text('Solicitar Este Serviço'),
-                              onPressed: () => _solicitarServico(
-                                Map<String, dynamic>.from(item),
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   );
