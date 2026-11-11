@@ -798,7 +798,11 @@ class _HomeViewState extends State<HomeView> {
 
   Widget _buildPrestadorCard(Map<String, dynamic> item, double width) {
     final nome = (item['nome'] ?? 'Profissional').toString();
-    final foto = item['foto_perfil']?.toString();
+    final fotosServicos = PrestadorService.extrairFotos(
+      item['fotos_servicos'] ?? item['fotos'] ?? item['foto_servico'],
+    );
+    final fotoServico = fotosServicos.isNotEmpty ? fotosServicos.first : null;
+    final fotoPerfil = item['foto_perfil']?.toString();
     final bairro = (item['bairro'] ?? '').toString();
     final cidade = (item['cidade'] ?? '').toString();
     final localizacao = [
@@ -837,9 +841,23 @@ class _HomeViewState extends State<HomeView> {
                   SizedBox(
                     height: 118,
                     width: double.infinity,
-                    child: foto != null && foto.isNotEmpty
+                    child: fotoServico != null
                         ? Image.network(
-                            foto,
+                            fotoServico,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) =>
+                                fotoPerfil != null && fotoPerfil.isNotEmpty
+                                ? Image.network(
+                                    fotoPerfil,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, _, _) =>
+                                        _buildPrestadorImageFallback(),
+                                  )
+                                : _buildPrestadorImageFallback(),
+                          )
+                        : fotoPerfil != null && fotoPerfil.isNotEmpty
+                        ? Image.network(
+                            fotoPerfil,
                             fit: BoxFit.cover,
                             errorBuilder: (_, _, _) =>
                                 _buildPrestadorImageFallback(),

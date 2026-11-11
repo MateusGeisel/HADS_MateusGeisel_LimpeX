@@ -12,6 +12,16 @@ export class PrestadorRepository {
         u.id_usuario,
         u.nome,
         u.foto_perfil,
+        (
+          SELECT s.fotos
+          FROM servico s
+          WHERE s.id_prestador = p.id_prestador
+            AND s.ativo = TRUE
+            AND s.fotos IS NOT NULL
+            AND s.fotos::text NOT IN ('{}', '[]', '')
+          ORDER BY s.id_servico DESC
+          LIMIT 1
+        ) AS fotos_servicos,
         u.telefone,
         l.cidade,
         l.bairro,
