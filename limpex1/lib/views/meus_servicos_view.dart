@@ -89,6 +89,33 @@ class _MeusServicosViewState extends State<MeusServicosView> {
   }
 
   void _abrirModalCadastrarServico() {
+    _limparCampos();
+    _abrirModalServico();
+  }
+
+  void _abrirModalEditarServico(Map<String, dynamic> servico) {
+    _nomeController.text = servico['nome']?.toString() ?? '';
+    _descricaoController.text = servico['descricao']?.toString() ?? '';
+    _valorController.text = servico['valor']?.toString() ?? '';
+    _idCategoriaSelecionada = int.tryParse(
+      servico['id_categoria']?.toString() ?? '',
+    );
+    final tipoCobranca = servico['tipo_cobranca']?.toString();
+    _tipoCobranca = ['HORA', 'TURNO', 'FIXO'].contains(tipoCobranca)
+        ? tipoCobranca!
+        : 'HORA';
+    final fotos = servico['fotos'];
+    final listaFotos = fotos is List
+        ? fotos.map((foto) => foto.toString()).toList()
+        : <String>[];
+    _foto1Controller.text = listaFotos.isNotEmpty ? listaFotos[0] : '';
+    _foto2Controller.text = listaFotos.length > 1 ? listaFotos[1] : '';
+    _foto3Controller.text = listaFotos.length > 2 ? listaFotos[2] : '';
+    _abrirModalServico(servico: servico);
+  }
+
+  void _abrirModalServico({Map<String, dynamic>? servico}) {
+    final editando = servico != null;
     bool salvando = false;
 
     showModalBottomSheet(
@@ -114,8 +141,8 @@ class _MeusServicosViewState extends State<MeusServicosView> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Cadastrar Novo Serviço',
+                      Text(
+                        editando ? 'Editar Serviço' : 'Cadastrar Novo Serviço',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -125,17 +152,20 @@ class _MeusServicosViewState extends State<MeusServicosView> {
 
                       DropdownButtonFormField<int>(
                         isExpanded: true,
-                        value: _idCategoriaSelecionada,
+                        initialValue: _idCategoriaSelecionada,
                         decoration: const InputDecoration(
                           labelText: 'Categoria do Serviço',
                         ),
-                        items: _categorias.map((cat) {
-                          final id = _extrairIdCategoria(cat);
-                          return DropdownMenuItem<int>(
-                            value: id,
-                            child: Text(cat['nome'] ?? 'Categoria'),
-                          );
-                        }).where((item) => item.value != null).toList(),
+                        items: _categorias
+                            .map((cat) {
+                              final id = _extrairIdCategoria(cat);
+                              return DropdownMenuItem<int>(
+                                value: id,
+                                child: Text(cat['nome'] ?? 'Categoria'),
+                              );
+                            })
+                            .where((item) => item.value != null)
+                            .toList(),
                         validator: (v) =>
                             v == null ? 'Selecione uma categoria' : null,
                         onChanged: (val) {
@@ -149,7 +179,8 @@ class _MeusServicosViewState extends State<MeusServicosView> {
                       TextFormField(
                         controller: _nomeController,
                         decoration: const InputDecoration(
-                          labelText: 'Nome do Serviço (ex: Instalação de Torneira)',
+                          labelText:
+                              'Nome do Serviço (ex: Instalação de Torneira)',
                         ),
                         validator: (v) => v == null || v.trim().isEmpty
                             ? 'Informe o nome do serviço'
@@ -179,9 +210,14 @@ class _MeusServicosViewState extends State<MeusServicosView> {
                               decoration: const InputDecoration(
                                 labelText: 'Valor (R\$)',
                               ),
-                              validator: (v) => v == null || v.trim().isEmpty
-                                  ? 'Informe o valor'
-                                  : null,
+                              validator: (v) {
+                                final valor = double.tryParse(
+                                  (v ?? '').replaceAll(',', '.'),
+                                );
+                                return valor == null || valor <= 0
+                                    ? 'Informe um valor válido'
+                                    : null;
+                              },
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -200,6 +236,10 @@ class _MeusServicosViewState extends State<MeusServicosView> {
                                 DropdownMenuItem(
                                   value: 'TURNO',
                                   child: Text('Por Turno'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'FIXO',
+                                  child: Text('Valor Fixo'),
                                 ),
                               ],
                               onChanged: (val) {
@@ -223,17 +263,38 @@ class _MeusServicosViewState extends State<MeusServicosView> {
                       const SizedBox(height: 8),
                       const Text('Foto 1'),
                       ImageUploaderWidget(
-                        onImageUploaded: (url) => _foto1Controller.text = url,
+                        key: ValueKey(
+                          '${servico?['id_servico'] ?? 'novo'}-foto1',
+                        ),
+                        initialImageUrl: _foto1Controller.text.isEmpty
+                            ? null
+                            : _foto1Controller.text,
+                        onImageChanged: (url) =>
+                            _foto1Controller.text = url ?? '',
                       ),
                       const SizedBox(height: 12),
                       const Text('Foto 2 (opcional)'),
                       ImageUploaderWidget(
-                        onImageUploaded: (url) => _foto2Controller.text = url,
+                        key: ValueKey(
+                          '${servico?['id_servico'] ?? 'novo'}-foto2',
+                        ),
+                        initialImageUrl: _foto2Controller.text.isEmpty
+                            ? null
+                            : _foto2Controller.text,
+                        onImageChanged: (url) =>
+                            _foto2Controller.text = url ?? '',
                       ),
                       const SizedBox(height: 12),
                       const Text('Foto 3 (opcional)'),
                       ImageUploaderWidget(
-                        onImageUploaded: (url) => _foto3Controller.text = url,
+                        key: ValueKey(
+                          '${servico?['id_servico'] ?? 'novo'}-foto3',
+                        ),
+                        initialImageUrl: _foto3Controller.text.isEmpty
+                            ? null
+                            : _foto3Controller.text,
+                        onImageChanged: (url) =>
+                            _foto3Controller.text = url ?? '',
                       ),
                       const SizedBox(height: 20),
 
@@ -248,7 +309,9 @@ class _MeusServicosViewState extends State<MeusServicosView> {
                           onPressed: salvando
                               ? null
                               : () async {
-                                  if (!_formKey.currentState!.validate()) return;
+                                  if (!_formKey.currentState!.validate()) {
+                                    return;
+                                  }
 
                                   setModalState(() => salvando = true);
 
@@ -263,19 +326,37 @@ class _MeusServicosViewState extends State<MeusServicosView> {
                                     fotos.add(_foto3Controller.text.trim());
                                   }
 
-                                  final sucesso = await _prestadorService.criarServicoExt(
-                                    idCategoria: _idCategoriaSelecionada ?? 1,
-                                    nome: _nomeController.text.trim(),
-                                    descricao: _descricaoController.text.trim(),
-                                    valor: double.tryParse(
-                                          _valorController.text.replaceAll(',', '.'),
-                                        ) ??
-                                        0.0,
-                                    tipoCobranca: _tipoCobranca,
-                                    fotos: fotos,
+                                  final valor = double.tryParse(
+                                    _valorController.text.replaceAll(',', '.'),
                                   );
+                                  final sucesso = editando
+                                      ? await _prestadorService
+                                            .atualizarServico(
+                                              idServico: int.parse(
+                                                servico['id_servico']
+                                                    .toString(),
+                                              ),
+                                              idCategoria:
+                                                  _idCategoriaSelecionada!,
+                                              nome: _nomeController.text.trim(),
+                                              descricao: _descricaoController
+                                                  .text
+                                                  .trim(),
+                                              valor: valor!,
+                                              tipoCobranca: _tipoCobranca,
+                                              fotos: fotos,
+                                            )
+                                      : await _prestadorService.criarServicoExt(
+                                          idCategoria: _idCategoriaSelecionada!,
+                                          nome: _nomeController.text.trim(),
+                                          descricao: _descricaoController.text
+                                              .trim(),
+                                          valor: valor!,
+                                          tipoCobranca: _tipoCobranca,
+                                          fotos: fotos,
+                                        );
 
-                                  if (!mounted) return;
+                                  if (!context.mounted) return;
 
                                   setModalState(() => salvando = false);
 
@@ -283,16 +364,24 @@ class _MeusServicosViewState extends State<MeusServicosView> {
                                     Navigator.pop(context);
                                     _limparCampos();
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Serviço cadastrado com sucesso!'),
+                                      SnackBar(
+                                        content: Text(
+                                          editando
+                                              ? 'Serviço atualizado com sucesso!'
+                                              : 'Serviço cadastrado com sucesso!',
+                                        ),
                                         backgroundColor: Colors.green,
                                       ),
                                     );
                                     _carregarMeusServicos();
                                   } else {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Erro ao cadastrar serviço no servidor.'),
+                                      SnackBar(
+                                        content: Text(
+                                          editando
+                                              ? 'Erro ao atualizar serviço no servidor.'
+                                              : 'Erro ao cadastrar serviço no servidor.',
+                                        ),
                                         backgroundColor: Colors.red,
                                       ),
                                     );
@@ -307,8 +396,10 @@ class _MeusServicosViewState extends State<MeusServicosView> {
                                     color: AppTheme.textPrimary,
                                   ),
                                 )
-                              : const Text(
-                                  'Salvar Serviço',
+                              : Text(
+                                  editando
+                                      ? 'Salvar Alterações'
+                                      : 'Salvar Serviço',
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
@@ -325,6 +416,44 @@ class _MeusServicosViewState extends State<MeusServicosView> {
         );
       },
     );
+  }
+
+  Future<void> _confirmarExclusaoServico(Map<String, dynamic> servico) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Excluir serviço'),
+        content: Text('Deseja excluir "${servico['nome']}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+    if (confirmar != true || !mounted) return;
+
+    final idServico = int.tryParse(servico['id_servico']?.toString() ?? '');
+    final sucesso =
+        idServico != null && await _prestadorService.excluirServico(idServico);
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          sucesso
+              ? 'Serviço excluído com sucesso.'
+              : 'Não foi possível excluir o serviço.',
+        ),
+        backgroundColor: sucesso ? Colors.green : Colors.red,
+      ),
+    );
+    if (sucesso) _carregarMeusServicos();
   }
 
   @override
@@ -403,7 +532,10 @@ class _MeusServicosViewState extends State<MeusServicosView> {
                 itemCount: _servicos.length,
                 itemBuilder: (context, index) {
                   final item = _servicos[index];
-                  final List<dynamic> fotos = item['fotos'] ?? [];
+                  final dynamic fotosData = item['fotos'];
+                  final List<dynamic> fotos = fotosData is List
+                      ? fotosData
+                      : [];
 
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
@@ -416,22 +548,56 @@ class _MeusServicosViewState extends State<MeusServicosView> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                item['nome'] ?? 'Serviço',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
+                              Expanded(
+                                child: Text(
+                                  item['nome'] ?? 'Serviço',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                               Text(
-                                'R\$ ${item['valor']} / ${item['tipo_cobranca'] == "TURNO" ? "Turno" : "Hora"}',
+                                'R\$ ${item['valor']} / ${item['tipo_cobranca'] == "TURNO"
+                                    ? "Turno"
+                                    : item['tipo_cobranca'] == "FIXO"
+                                    ? "Fixo"
+                                    : "Hora"}',
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.green.shade700,
                                 ),
+                              ),
+                              PopupMenuButton<String>(
+                                tooltip: 'Ações do serviço',
+                                onSelected: (acao) {
+                                  final dados = Map<String, dynamic>.from(item);
+                                  if (acao == 'editar') {
+                                    _abrirModalEditarServico(dados);
+                                  } else {
+                                    _confirmarExclusaoServico(dados);
+                                  }
+                                },
+                                itemBuilder: (context) => const [
+                                  PopupMenuItem(
+                                    value: 'editar',
+                                    child: ListTile(
+                                      contentPadding: EdgeInsets.zero,
+                                      leading: Icon(Icons.edit_outlined),
+                                      title: Text('Editar'),
+                                    ),
+                                  ),
+                                  PopupMenuItem(
+                                    value: 'excluir',
+                                    child: ListTile(
+                                      contentPadding: EdgeInsets.zero,
+                                      leading: Icon(Icons.delete_outline),
+                                      title: Text('Excluir'),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -456,11 +622,18 @@ class _MeusServicosViewState extends State<MeusServicosView> {
                                   return Container(
                                     margin: const EdgeInsets.only(right: 8),
                                     width: 70,
-                                    decoration: BoxDecoration(
+                                    child: ClipRRect(
                                       borderRadius: BorderRadius.circular(10),
-                                      image: DecorationImage(
-                                        image: NetworkImage(fotos[fIndex]),
+                                      child: Image.network(
+                                        fotos[fIndex].toString(),
+                                        width: 70,
+                                        height: 70,
                                         fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) =>
+                                                const Icon(
+                                                  Icons.broken_image_outlined,
+                                                ),
                                       ),
                                     ),
                                   );

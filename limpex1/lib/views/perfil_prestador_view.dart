@@ -248,7 +248,10 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
                 itemCount: servicos.length,
                 itemBuilder: (context, index) {
                   final item = servicos[index];
-                  final List<dynamic> fotos = item['fotos'] ?? [];
+                  final dynamic fotosData = item['fotos'];
+                  final List<dynamic> fotos = fotosData is List
+                      ? fotosData
+                      : [];
 
                   return Card(
                     margin: const EdgeInsets.only(bottom: 14),
@@ -283,7 +286,11 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
-                                  'R\$ ${item['valor']} / ${item['tipo_cobranca'] == "TURNO" ? "Turno" : "Hora"}',
+                                  'R\$ ${item['valor']} / ${item['tipo_cobranca'] == "TURNO"
+                                      ? "Turno"
+                                      : item['tipo_cobranca'] == "FIXO"
+                                      ? "Fixo"
+                                      : "Hora"}',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     color: Colors.green.shade800,
@@ -315,11 +322,18 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
                                   return Container(
                                     margin: const EdgeInsets.only(right: 8),
                                     width: 75,
-                                    decoration: BoxDecoration(
+                                    child: ClipRRect(
                                       borderRadius: BorderRadius.circular(10),
-                                      image: DecorationImage(
-                                        image: NetworkImage(fotos[fIndex]),
+                                      child: Image.network(
+                                        fotos[fIndex].toString(),
+                                        width: 75,
+                                        height: 75,
                                         fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) =>
+                                                const Icon(
+                                                  Icons.broken_image_outlined,
+                                                ),
                                       ),
                                     ),
                                   );

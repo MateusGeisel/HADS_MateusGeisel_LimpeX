@@ -54,4 +54,30 @@ export class ServicoRepository {
     const result = await pool.query(query, [id_servico, id_prestador]);
     return result.rows[0];
   }
+
+  static async atualizar(id_servico: number, dados: ServicoDTO) {
+    const query = `
+      UPDATE servico
+      SET id_categoria = $1,
+          nome = $2,
+          descricao = $3,
+          valor = $4,
+          tipo_cobranca = $5,
+          fotos = $6
+      WHERE id_servico = $7 AND id_prestador = $8 AND ativo = TRUE
+      RETURNING *;
+    `;
+    const values = [
+      dados.id_categoria,
+      dados.nome,
+      dados.descricao || null,
+      dados.valor,
+      dados.tipo_cobranca || 'HORA',
+      dados.fotos || [],
+      id_servico,
+      dados.id_prestador,
+    ];
+    const result = await pool.query(query, values);
+    return result.rows[0];
+  }
 }

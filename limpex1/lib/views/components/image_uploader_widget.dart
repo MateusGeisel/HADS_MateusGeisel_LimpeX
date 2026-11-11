@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+
 import '../../services/upload_service.dart';
 
 class ImageUploaderWidget extends StatefulWidget {
-  final ValueChanged<String> onImageUploaded;
+  final String? initialImageUrl;
+  final ValueChanged<String?> onImageChanged;
 
-  const ImageUploaderWidget({super.key, required this.onImageUploaded});
+  const ImageUploaderWidget({
+    super.key,
+    this.initialImageUrl,
+    required this.onImageChanged,
+  });
 
   @override
   State<ImageUploaderWidget> createState() => _ImageUploaderWidgetState();
@@ -14,6 +20,12 @@ class ImageUploaderWidget extends StatefulWidget {
 class _ImageUploaderWidgetState extends State<ImageUploaderWidget> {
   String? _imageUrl;
   bool _isUploading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _imageUrl = widget.initialImageUrl;
+  }
 
   Future<void> _upload() async {
     setState(() => _isUploading = true);
@@ -32,7 +44,7 @@ class _ImageUploaderWidgetState extends State<ImageUploaderWidget> {
       }
 
       setState(() => _imageUrl = url);
-      widget.onImageUploaded(url);
+      widget.onImageChanged(url);
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -46,24 +58,42 @@ class _ImageUploaderWidgetState extends State<ImageUploaderWidget> {
     }
   }
 
+  void _removerImagem() {
+    setState(() => _imageUrl = null);
+    widget.onImageChanged(null);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         if (_imageUrl != null)
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.network(
-              _imageUrl!,
-              height: 120,
-              width: 120,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => const SizedBox(
-                height: 120,
-                width: 120,
-                child: Icon(Icons.broken_image_outlined),
+          Stack(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  _imageUrl!,
+                  height: 120,
+                  width: 120,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => const SizedBox(
+                    height: 120,
+                    width: 120,
+                    child: Icon(Icons.broken_image_outlined),
+                  ),
+                ),
               ),
-            ),
+              Positioned(
+                right: 4,
+                top: 4,
+                child: IconButton.filled(
+                  tooltip: 'Remover foto',
+                  onPressed: _removerImagem,
+                  icon: const Icon(Icons.close, size: 18),
+                ),
+              ),
+            ],
           ),
         const SizedBox(height: 8),
         _isUploading
@@ -71,7 +101,9 @@ class _ImageUploaderWidgetState extends State<ImageUploaderWidget> {
             : OutlinedButton.icon(
                 onPressed: _upload,
                 icon: const Icon(Icons.add_a_photo),
-                label: Text(_imageUrl == null ? 'Adicionar Foto' : 'Alterar Foto'),
+                label: Text(
+                  _imageUrl == null ? 'Adicionar Foto' : 'Alterar Foto',
+                ),
               ),
       ],
     );

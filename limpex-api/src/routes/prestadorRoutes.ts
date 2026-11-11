@@ -12,6 +12,8 @@ prestadorRouter.post('/trilha-mei', authMiddleware, PrestadorController.registra
 // 2. Rotas de gestão de serviços e agenda - PROTEGIDAS
 prestadorRouter.get('/servicos/meus', authMiddleware, PrestadorController.listarMeusServicos);
 prestadorRouter.post('/servicos', authMiddleware, PrestadorController.criarServico);
+prestadorRouter.put('/servicos/:id', authMiddleware, PrestadorController.atualizarServico);
+prestadorRouter.delete('/servicos/:id', authMiddleware, PrestadorController.excluirServico);
 prestadorRouter.patch('/agenda', authMiddleware, PrestadorController.atualizarAgenda);
 
 // 3. Rotas da Vitrine (🟢 PÚBLICAS)

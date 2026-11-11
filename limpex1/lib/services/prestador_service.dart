@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import 'auth_service.dart';
@@ -171,6 +172,57 @@ class PrestadorService {
       return response.statusCode == 201;
     } catch (e) {
       print('Erro ao criar serviço estendido: $e');
+      return false;
+    }
+  }
+
+  Future<bool> atualizarServico({
+    required int idServico,
+    required int idCategoria,
+    required String nome,
+    String? descricao,
+    required double valor,
+    required String tipoCobranca,
+    required List<String> fotos,
+  }) async {
+    final token = await _authService.getToken();
+    if (token == null) return false;
+
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/servicos/$idServico'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': '******',
+        },
+        body: jsonEncode({
+          'id_categoria': idCategoria,
+          'nome': nome,
+          'descricao': descricao,
+          'valor': valor,
+          'tipo_cobranca': tipoCobranca,
+          'fotos': fotos,
+        }),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('Erro ao atualizar serviço: $e');
+      return false;
+    }
+  }
+
+  Future<bool> excluirServico(int idServico) async {
+    final token = await _authService.getToken();
+    if (token == null) return false;
+
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/servicos/$idServico'),
+        headers: {'Authorization': '******'},
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('Erro ao excluir serviço: $e');
       return false;
     }
   }

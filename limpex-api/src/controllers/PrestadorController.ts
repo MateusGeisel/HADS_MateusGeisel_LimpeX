@@ -114,19 +114,33 @@ static async atualizarAgenda(req: AuthenticatedRequest, res: Response): Promise<
         return;
       }
 
-      const { id_categoria, nome, descricao, valor, modalidade } = req.body;
+      const { id_categoria, nome, descricao, valor, tipo_cobranca, fotos, modalidade } = req.body;
 
-      if (!id_categoria || !nome || !valor) {
+      const categoriaId = Number(id_categoria);
+      const valorServico = Number(valor);
+      if (!Number.isInteger(categoriaId) || categoriaId <= 0 ||
+          typeof nome !== 'string' || !nome.trim() ||
+          !Number.isFinite(valorServico) || valorServico <= 0) {
         res.status(400).json({ error: 'Categoria, nome e valor são obrigatórios.' });
+        return;
+      }
+      if (fotos !== undefined && (!Array.isArray(fotos) || !fotos.every((foto) => typeof foto === 'string'))) {
+        res.status(400).json({ error: 'As fotos do serviço devem ser uma lista de URLs.' });
+        return;
+      }
+      if (tipo_cobranca !== undefined && !['HORA', 'TURNO', 'FIXO'].includes(tipo_cobranca)) {
+        res.status(400).json({ error: 'Tipo de cobrança inválido.' });
         return;
       }
 
       const novoServico = await ServicoRepository.criar({
         id_prestador: prestador.id_prestador,
-        id_categoria: Number(id_categoria),
-        nome,
+        id_categoria: categoriaId,
+        nome: nome.trim(),
         descricao,
-        valor: Number(valor),
+        valor: valorServico,
+        tipo_cobranca,
+        fotos,
         modalidade,
       });
 
@@ -137,6 +151,94 @@ static async atualizarAgenda(req: AuthenticatedRequest, res: Response): Promise<
     } catch (error) {
       console.error('Erro ao criar serviço:', error);
       res.status(500).json({ error: 'Erro interno ao criar serviço.' });
+    }
+  }
+
+  static async atualizarServico(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const id_usuario = req.userId;
+      const id_servico = Number(req.params.id);
+      if (!id_usuario) {
+        res.status(401).json({ error: 'Usuário não autenticado.' });
+        return;
+      }
+      if (!Number.isInteger(id_servico) || id_servico <= 0) {
+        res.status(400).json({ error: 'ID de serviço inválido.' });
+        return;
+      }
+
+      const prestador = await PrestadorRepository.buscarPorUsuario(id_usuario);
+      if (!prestador) {
+        res.status(403).json({ error: 'Apenas prestadores cadastrados podem editar serviços.' });
+        return;
+      }
+
+      const { id_categoria, nome, descricao, valor, tipo_cobranca, fotos } = req.body;
+      const categoriaId = Number(id_categoria);
+      const valorServico = Number(valor);
+      if (!Number.isInteger(categoriaId) || categoriaId <= 0 ||
+          typeof nome !== 'string' || !nome.trim() ||
+          !Number.isFinite(valorServico) || valorServico <= 0) {
+        res.status(400).json({ error: 'Categoria, nome e valor são obrigatórios.' });
+        return;
+      }
+      if (fotos !== undefined && (!Array.isArray(fotos) || !fotos.every((foto) => typeof foto === 'string'))) {
+        res.status(400).json({ error: 'As fotos do serviço devem ser uma lista de URLs.' });
+        return;
+      }
+      if (tipo_cobranca !== undefined && !['HORA', 'TURNO', 'FIXO'].includes(tipo_cobranca)) {
+        res.status(400).json({ error: 'Tipo de cobrança inválido.' });
+        return;
+      }
+
+      const servico = await ServicoRepository.atualizar(id_servico, {
+        id_prestador: prestador.id_prestador,
+        id_categoria: categoriaId,
+        nome: nome.trim(),
+        descricao,
+        valor: valorServico,
+        tipo_cobranca,
+        fotos,
+      });
+      if (!servico) {
+        res.status(404).json({ error: 'Serviço não encontrado.' });
+        return;
+      }
+      res.status(200).json({ message: 'Serviço atualizado com sucesso!', servico });
+    } catch (error) {
+      console.error('Erro ao atualizar serviço:', error);
+      res.status(500).json({ error: 'Erro interno ao atualizar serviço.' });
+    }
+  }
+
+  static async excluirServico(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const id_usuario = req.userId;
+      const id_servico = Number(req.params.id);
+      if (!id_usuario) {
+        res.status(401).json({ error: 'Usuário não autenticado.' });
+        return;
+      }
+      if (!Number.isInteger(id_servico) || id_servico <= 0) {
+        res.status(400).json({ error: 'ID de serviço inválido.' });
+        return;
+      }
+
+      const prestador = await PrestadorRepository.buscarPorUsuario(id_usuario);
+      if (!prestador) {
+        res.status(403).json({ error: 'Apenas prestadores cadastrados podem excluir serviços.' });
+        return;
+      }
+
+      const servico = await ServicoRepository.desativar(id_servico, prestador.id_prestador);
+      if (!servico) {
+        res.status(404).json({ error: 'Serviço não encontrado.' });
+        return;
+      }
+      res.status(200).json({ message: 'Serviço excluído com sucesso.' });
+    } catch (error) {
+      console.error('Erro ao excluir serviço:', error);
+      res.status(500).json({ error: 'Erro interno ao excluir serviço.' });
     }
   }
 }
