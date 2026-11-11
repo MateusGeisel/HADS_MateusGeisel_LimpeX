@@ -1,10 +1,6 @@
 import multer from 'multer';
 
+// Salva o arquivo na memória RAM para enviar o Buffer ao Supabase
 const storage = multer.memoryStorage();
 
-export const upload = multer({
-  storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024, // Limite de 5MB por imagem
-  },
-});
+export const upload = multer({ storage });

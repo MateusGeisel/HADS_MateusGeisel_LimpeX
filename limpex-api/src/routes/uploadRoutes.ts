@@ -7,6 +7,7 @@ const uploadRouter = Router();
 uploadRouter.post('/', upload.single('imagem'), async (req, res) => {
   try {
     if (!req.file) {
+      console.log('❌ Nenhum arquivo enviado na requisição.');
       return res.status(400).json({ error: 'Nenhuma imagem foi enviada.' });
     }
 
@@ -14,24 +15,31 @@ uploadRouter.post('/', upload.single('imagem'), async (req, res) => {
     const fileExt = file.originalname.split('.').pop();
     const fileName = `${Date.now()}.${fileExt}`;
 
-    // Envia o ficheiro em memória para o Supabase Storage
+    console.log(`📤 Tentando subir imagem: ${fileName}`);
+
+    // Envia para o Supabase Storage
     const { error } = await supabase.storage
       .from('limpex-imagens')
       .upload(fileName, file.buffer, {
         contentType: file.mimetype,
+        upsert: true,
       });
 
     if (error) {
-      return res.status(500).json({ error: 'Erro ao guardar a imagem no Supabase: ' + error.message });
+      console.error('❌ Erro retornado pelo Supabase:', error.message);
+      return res.status(500).json({ error: 'Erro no Supabase: ' + error.message });
     }
 
-    // Obter a URL pública da imagem enviada
+    // Pega a URL pública
     const { data } = supabase.storage
       .from('limpex-imagens')
       .getPublicUrl(fileName);
 
+    console.log('✅ Imagem salva com sucesso! URL:', data.publicUrl);
     return res.status(200).json({ url: data.publicUrl });
+
   } catch (err: any) {
+    console.error('❌ Erro interno:', err.message);
     return res.status(500).json({ error: err.message || 'Erro no servidor.' });
   }
 });
