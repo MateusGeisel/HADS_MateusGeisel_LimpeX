@@ -142,19 +142,12 @@ class _SplashViewState extends State<SplashView> {
 
     if (!mounted) return;
 
-    if (isLogged && _authViewModel.currentUser != null) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => HomeView(user: _authViewModel.currentUser!),
-        ),
-      );
-    } else {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginView()),
-      );
-    }
+    Navigator.pushReplacement(
+  context,
+  MaterialPageRoute(
+    builder: (context) => HomeView(user: _authViewModel.currentUser), // user pode ser null se for visitante
+  ),
+);
   }
 
   @override

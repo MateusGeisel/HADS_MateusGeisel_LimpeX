@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../services/prestador_service.dart';
+import '../services/auth_service.dart';
 import '../main.dart';
+import 'login_view.dart';
 
 class PerfilPrestadorView extends StatefulWidget {
   final int idPrestador;
@@ -14,6 +16,7 @@ class PerfilPrestadorView extends StatefulWidget {
 
 class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
   final PrestadorService _prestadorService = PrestadorService();
+  final AuthService _authService = AuthService();
   Map<String, dynamic>? _perfilData;
   bool _carregando = true;
 
@@ -35,6 +38,48 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
     }
   }
 
+  Future<void> _solicitarServico(Map<String, dynamic> servico) async {
+    final token = await _authService.getToken();
+    if (!mounted) return;
+
+    if (token == null || token.isEmpty) {
+      final desejaEntrar = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Entre para contratar'),
+          content: const Text(
+            'Você pode explorar os perfis livremente. Para solicitar um serviço, entre ou crie sua conta.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Agora não'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Entrar'),
+            ),
+          ],
+        ),
+      );
+
+      if (desejaEntrar == true && mounted) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginView()),
+        );
+      }
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Serviço "${servico['nome']}" selecionado!'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_carregando) {
@@ -51,7 +96,7 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
       );
     }
 
-    final prestador = _perfilData!['prestador'] ?? {};
+    final prestador = _perfilData!['prestador'] ?? _perfilData!;
     final List<dynamic> servicos = _perfilData!['servicos'] ?? [];
     final bool isFormalizado = prestador['selo_formalizado'] == true;
 
@@ -296,16 +341,9 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
                                 size: 18,
                               ),
                               label: const Text('Solicitar Este Serviço'),
-                              onPressed: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Serviço "${item['nome']}" selecionado!',
-                                    ),
-                                    backgroundColor: Colors.green,
-                                  ),
-                                );
-                              },
+                              onPressed: () => _solicitarServico(
+                                Map<String, dynamic>.from(item),
+                              ),
                             ),
                           ),
                         ],

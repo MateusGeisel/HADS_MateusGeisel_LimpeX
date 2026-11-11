@@ -14,9 +14,9 @@ import 'perfil_prestador_view.dart';
 import 'meus_servicos_view.dart';
 
 class HomeView extends StatefulWidget {
-  final UserModel user;
+  final UserModel? user; // 👈 Opcional para aceitar visitantes sem login
 
-  const HomeView({super.key, required this.user});
+  const HomeView({super.key, this.user}); // 👈 Sem o required
 
   @override
   State<HomeView> createState() => _HomeViewState();
@@ -26,6 +26,7 @@ class _HomeViewState extends State<HomeView> {
   final SolicitacaoService _solicitacaoService = SolicitacaoService();
   final PrestadorService _prestadorService = PrestadorService();
   final ScrollController _scrollController = ScrollController();
+  final TextEditingController _buscaController = TextEditingController();
   final GlobalKey _prestadoresSectionKey = GlobalKey();
   final GlobalKey _solicitacoesSectionKey = GlobalKey();
   final GlobalKey _servicosDisponiveisSectionKey = GlobalKey();
@@ -38,6 +39,7 @@ class _HomeViewState extends State<HomeView> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _buscaController.dispose();
     super.dispose();
   }
 
@@ -50,7 +52,9 @@ class _HomeViewState extends State<HomeView> {
   Future<void> _carregarDados() async {
     setState(() => _carregando = true);
 
-    if (widget.user.tipoPerfil == 'PRESTADOR') {
+    final isPrestador = widget.user?.tipoPerfil == 'PRESTADOR';
+
+    if (isPrestador) {
       final lista = await _solicitacaoService.buscarSolicitacoesDisponiveis();
       if (mounted) {
         setState(() {
@@ -59,8 +63,10 @@ class _HomeViewState extends State<HomeView> {
         });
       }
     } else {
-      final listaSolicitacoes = await _solicitacaoService
-          .buscarMinhasSolicitacoes();
+      // Se não houver usuário logado (visitante), busca apenas a lista pública de prestadores
+      final listaSolicitacoes = widget.user != null
+          ? await _solicitacaoService.buscarMinhasSolicitacoes()
+          : [];
       final listaPrestadores = await _prestadorService.listarPrestadores();
 
       if (mounted) {
@@ -88,14 +94,20 @@ class _HomeViewState extends State<HomeView> {
   Future<void> _selecionarNavegacao(int index, bool isPrestador) async {
     setState(() => _selectedNavIndex = index);
 
+    if (!isPrestador && widget.user == null && index == 2) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginView()),
+      );
+      return;
+    }
+
     if (isPrestador && index == 2) {
       await Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const MeusServicosView()),
       );
-      if (mounted) {
-        setState(() => _selectedNavIndex = 0);
-      }
+      if (mounted) setState(() => _selectedNavIndex = 0);
       return;
     }
 
@@ -121,6 +133,24 @@ class _HomeViewState extends State<HomeView> {
         curve: Curves.easeInOut,
         alignment: 0.08,
       );
+    }
+  }
+
+  Future<void> _abrirSolicitacao() async {
+    if (widget.user == null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginView()),
+      );
+      return;
+    }
+
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const CriarSolicitacaoView()),
+    );
+    if (result == true && mounted) {
+      _carregarDados();
     }
   }
 
@@ -302,7 +332,8 @@ class _HomeViewState extends State<HomeView> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isPrestador = widget.user.tipoPerfil == 'PRESTADOR';
+    final bool isPrestador = widget.user?.tipoPerfil == 'PRESTADOR';
+    final String nomeExibicao = widget.user?.nome ?? 'Visitante';
 
     return Scaffold(
       appBar: AppBar(
@@ -316,9 +347,18 @@ class _HomeViewState extends State<HomeView> {
             onPressed: _carregarDados,
           ),
           IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Sair',
-            onPressed: () => _fazerLogout(context),
+            icon: Icon(widget.user != null ? Icons.logout : Icons.login),
+            tooltip: widget.user != null ? 'Sair' : 'Entrar',
+            onPressed: () {
+              if (widget.user != null) {
+                _fazerLogout(context);
+              } else {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginView()),
+                );
+              }
+            },
           ),
         ],
       ),
@@ -331,61 +371,53 @@ class _HomeViewState extends State<HomeView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: isPrestador
-                        ? [AppTheme.secondaryYellow, const Color(0xFFFFE082)]
-                        : [AppTheme.primaryBlue, Colors.blue.shade700],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color:
-                          (isPrestador
-                                  ? AppTheme.secondaryYellow
-                                  : AppTheme.primaryBlue)
-                              .withValues(alpha: 0.3),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
+              if (isPrestador) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [AppTheme.secondaryYellow, Color(0xFFFFE082)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 30,
-                      backgroundColor: Colors.white,
-                      child: Icon(
-                        isPrestador ? Icons.cleaning_services : Icons.person,
-                        color: isPrestador
-                            ? AppTheme.prestadorAccent
-                            : AppTheme.primaryBlue,
-                        size: 32,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.secondaryYellow.withValues(alpha: 0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Text(
-                                'Olá, ${widget.user.nome}!',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: isPrestador
-                                      ? AppTheme.textPrimary
-                                      : Colors.white,
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      const CircleAvatar(
+                        radius: 30,
+                        backgroundColor: Colors.white,
+                        child: Icon(
+                          Icons.cleaning_services,
+                          color: AppTheme.prestadorAccent,
+                          size: 32,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    'Olá, $nomeExibicao!',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                              if (isPrestador) ...[
                                 const SizedBox(width: 6),
                                 const Icon(
                                   Icons.verified,
@@ -393,29 +425,22 @@ class _HomeViewState extends State<HomeView> {
                                   size: 20,
                                 ),
                               ],
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            isPrestador
-                                ? 'Perfil: Prestador de Serviços'
-                                : 'Perfil: Cliente LimpeX',
-                            style: TextStyle(
-                              color: isPrestador
-                                  ? AppTheme.textSecondary
-                                  : Colors.white.withValues(alpha: 0.9),
-                              fontSize: 14,
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Painel do prestador de serviços',
+                              style: TextStyle(
+                                color: AppTheme.textSecondary,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 24),
-
-              if (isPrestador) ...[
+                const SizedBox(height: 24),
                 _buildPrestadorDashboard(context),
               ] else ...[
                 _buildClienteDashboard(context),
@@ -458,6 +483,24 @@ class _HomeViewState extends State<HomeView> {
                     label: 'Agenda',
                   ),
                 ]
+              : widget.user == null
+              ? const [
+                  NavigationDestination(
+                    icon: Icon(Icons.home_outlined),
+                    selectedIcon: Icon(Icons.home),
+                    label: 'Início',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.people_outline),
+                    selectedIcon: Icon(Icons.people),
+                    label: 'Profissionais',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.work_outline),
+                    selectedIcon: Icon(Icons.work),
+                    label: 'Contratar',
+                  ),
+                ]
               : const [
                   NavigationDestination(
                     icon: Icon(Icons.home_outlined),
@@ -467,7 +510,7 @@ class _HomeViewState extends State<HomeView> {
                   NavigationDestination(
                     icon: Icon(Icons.people_outline),
                     selectedIcon: Icon(Icons.people),
-                    label: 'Prestadores',
+                    label: 'Profissionais',
                   ),
                   NavigationDestination(
                     icon: Icon(Icons.receipt_long_outlined),
@@ -481,38 +524,131 @@ class _HomeViewState extends State<HomeView> {
   }
 
   Widget _buildClienteDashboard(BuildContext context) {
+    final termoBusca = _buscaController.text.trim().toLowerCase();
+    final prestadoresFiltrados = _prestadoresDestaque.where((item) {
+      final nome = (item['nome'] ?? '').toString().toLowerCase();
+      final cidade = (item['cidade'] ?? '').toString().toLowerCase();
+      final bairro = (item['bairro'] ?? '').toString().toLowerCase();
+      return nome.contains(termoBusca) ||
+          cidade.contains(termoBusca) ||
+          bairro.contains(termoBusca);
+    }).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'O que você precisa hoje?',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(22),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEAF2FF),
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 7,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.verified_user_outlined,
+                      color: AppTheme.primaryBlue,
+                      size: 16,
+                    ),
+                    SizedBox(width: 6),
+                    Text(
+                      'Cuidado para sua casa',
+                      style: TextStyle(
+                        color: AppTheme.primaryBlue,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                widget.user == null
+                    ? 'Sua casa em boas mãos.'
+                    : 'Olá, ${widget.user!.nome.split(' ').first}!',
+                style: const TextStyle(
+                  color: AppTheme.textPrimary,
+                  fontSize: 27,
+                  height: 1.15,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Encontre profissionais de limpeza e escolha quem combina com você.',
+                style: TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 15,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 18),
+              TextField(
+                controller: _buscaController,
+                onChanged: (_) => setState(() {}),
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  hintText: 'Buscar por profissional ou cidade',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _buscaController.text.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: 'Limpar busca',
+                          onPressed: () {
+                            _buscaController.clear();
+                            setState(() {});
+                          },
+                          icon: const Icon(Icons.close),
+                        ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 20),
         ElevatedButton.icon(
-          onPressed: () async {
-            final result = await Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const CriarSolicitacaoView()),
-            );
-            if (result == true) {
-              _carregarDados();
-            }
-          },
+          onPressed: _abrirSolicitacao,
           icon: const Icon(Icons.add_circle_outline),
-          label: const Text('Solicitar Novo Serviço'),
+          label: Text(
+            widget.user == null
+                ? 'Entre para contratar um serviço'
+                : 'Solicitar um serviço',
+          ),
         ),
-        const SizedBox(height: 10),
-        OutlinedButton.icon(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AddAddressView()),
-            );
-          },
-          icon: const Icon(Icons.location_on_outlined),
-          label: const Text('Cadastrar Novo Endereço'),
-        ),
+        if (widget.user != null) ...[
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AddAddressView()),
+              );
+            },
+            icon: const Icon(Icons.location_on_outlined),
+            label: const Text('Cadastrar novo endereço'),
+          ),
+        ],
         const SizedBox(height: 28),
 
         Row(
@@ -520,32 +656,53 @@ class _HomeViewState extends State<HomeView> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text(
-              'Prestadores na Sua Região',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              'Profissionais disponíveis',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            TextButton(onPressed: () {}, child: const Text('Ver todos')),
+            if (_prestadoresDestaque.length > 4)
+              Text(
+                '${_prestadoresDestaque.length} encontrados',
+                style: const TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 12,
+                ),
+              ),
           ],
         ),
+        const SizedBox(height: 4),
+        const Text(
+          'Conheça os perfis e os serviços oferecidos.',
+          style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+        ),
         const SizedBox(height: 12),
-        if (_prestadoresDestaque.isEmpty)
+        if (_carregando)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(28),
+              child: CircularProgressIndicator(),
+            ),
+          )
+        else if (prestadoresFiltrados.isEmpty)
           Card(
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(18),
             ),
-            child: const Padding(
-              padding: EdgeInsets.all(20.0),
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
               child: Row(
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.people_outline,
                     color: AppTheme.primaryBlue,
                     size: 32,
                   ),
-                  SizedBox(width: 16),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Text(
-                      'Nenhum prestador disponível na sua região ainda.',
-                      style: TextStyle(color: AppTheme.textSecondary),
+                      _buscaController.text.isEmpty
+                          ? 'Ainda não há profissionais disponíveis. Tente novamente mais tarde.'
+                          : 'Nenhum profissional encontrado para essa busca.',
+                      style: const TextStyle(color: AppTheme.textSecondary),
                     ),
                   ),
                 ],
@@ -553,206 +710,249 @@ class _HomeViewState extends State<HomeView> {
             ),
           )
         else
-          SizedBox(
-            height: 160,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: _prestadoresDestaque.length,
-              itemBuilder: (context, index) {
-                final item = _prestadoresDestaque[index];
-                final bool temSelo = item['selo_formalizado'] == true;
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final columns = constraints.maxWidth >= 640 ? 3 : 2;
+              final spacing = 12.0;
+              final cardWidth =
+                  (constraints.maxWidth - spacing * (columns - 1)) / columns;
 
-                return GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => PerfilPrestadorView(
-                          idPrestador: item['id_prestador'],
-                        ),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    width: 155,
-                    margin: const EdgeInsets.only(right: 14),
-                    child: Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Stack(
-                              children: [
-                                CircleAvatar(
-                                  radius: 26,
-                                  backgroundColor: AppTheme.secondaryYellow
-                                      .withValues(alpha: 0.15),
-                                  child: const Icon(
-                                    Icons.person,
-                                    color: AppTheme.prestadorAccent,
-                                    size: 30,
-                                  ),
-                                ),
-                                if (temSelo)
-                                  const Positioned(
-                                    right: 0,
-                                    bottom: 0,
-                                    child: CircleAvatar(
-                                      radius: 9,
-                                      backgroundColor: Colors.white,
-                                      child: Icon(
-                                        Icons.verified,
-                                        color: AppTheme.primaryBlue,
-                                        size: 16,
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              item['nome'] ?? 'Prestador',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(
-                                  Icons.star,
-                                  color: Colors.amber,
-                                  size: 16,
-                                ),
-                                Text(
-                                  ' ${item['media_nota'] ?? "5.0"}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
+              return Wrap(
+                spacing: spacing,
+                runSpacing: spacing,
+                children: [
+                  for (final item in prestadoresFiltrados)
+                    _buildPrestadorCard(item, cardWidth),
+                ],
+              );
+            },
+          ),
+        if (widget.user != null) ...[
+          const SizedBox(height: 28),
+          Text(
+            'Minhas Solicitações',
+            key: _solicitacoesSectionKey,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          if (_solicitacoes.isEmpty)
+            Card(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.history,
+                      color: AppTheme.primaryBlue,
+                      size: 30,
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
+                        _carregando
+                            ? 'Carregando suas solicitações...'
+                            : 'Você ainda não fez solicitações.',
+                        style: const TextStyle(color: AppTheme.textSecondary),
                       ),
                     ),
+                  ],
+                ),
+              ),
+            )
+          else
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _solicitacoes.length,
+              itemBuilder: (context, index) {
+                final item = _solicitacoes[index];
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: ListTile(
+                    leading: const CircleAvatar(
+                      backgroundColor: Color(0xFFEAF2FF),
+                      child: Icon(
+                        Icons.cleaning_services_outlined,
+                        color: AppTheme.primaryBlue,
+                      ),
+                    ),
+                    title: Text(item['nome_categoria'] ?? 'Serviço'),
+                    subtitle: Text(
+                      'Data: ${item['data_agendamento'] ?? "A combinar"}',
+                    ),
+                    trailing: _buildStatusBadge(item['status'] ?? 'ABERTO'),
                   ),
                 );
               },
             ),
-          ),
+        ],
+      ],
+    );
+  }
 
-        const SizedBox(height: 28),
-        Text(
-          'Minhas Solicitações',
-          key: _solicitacoesSectionKey,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 12),
-        if (_carregando)
-          const Center(child: CircularProgressIndicator())
-        else if (_solicitacoes.isEmpty)
-          Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Padding(
-              padding: EdgeInsets.all(20.0),
-              child: Row(
-                children: [
-                  Icon(Icons.history, color: AppTheme.primaryBlue, size: 32),
-                  SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Nenhum serviço solicitado ainda',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          'Toque no botão acima para criar seu primeiro pedido.',
-                          style: TextStyle(
-                            color: AppTheme.textSecondary,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
+  Widget _buildPrestadorCard(Map<String, dynamic> item, double width) {
+    final nome = (item['nome'] ?? 'Profissional').toString();
+    final foto = item['foto_perfil']?.toString();
+    final bairro = (item['bairro'] ?? '').toString();
+    final cidade = (item['cidade'] ?? '').toString();
+    final localizacao = [
+      bairro,
+      cidade,
+    ].where((parte) => parte.trim().isNotEmpty).join(', ');
+    final totalAvaliacoes =
+        int.tryParse(item['total_avaliacoes']?.toString() ?? '0') ?? 0;
+    final idPrestador = int.tryParse(item['id_prestador']?.toString() ?? '');
+    final temSelo = item['selo_formalizado'] == true;
+
+    return SizedBox(
+      width: width,
+      child: Card(
+        margin: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
+        elevation: 1,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        child: InkWell(
+          onTap: idPrestador == null
+              ? null
+              : () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          PerfilPrestadorView(idPrestador: idPrestador),
                     ),
+                  );
+                },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
+                children: [
+                  SizedBox(
+                    height: 118,
+                    width: double.infinity,
+                    child: foto != null && foto.isNotEmpty
+                        ? Image.network(
+                            foto,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) =>
+                                _buildPrestadorImageFallback(),
+                          )
+                        : _buildPrestadorImageFallback(),
                   ),
-                ],
-              ),
-            ),
-          )
-        else
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _solicitacoes.length,
-            itemBuilder: (context, index) {
-              final item = _solicitacoes[index];
-              return Card(
-                margin: const EdgeInsets.only(bottom: 10.0),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
+                  if (temSelo)
+                    Positioned(
+                      left: 8,
+                      top: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 5,
+                        ),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryBlue.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Icon(
-                          Icons.cleaning_services,
-                          color: AppTheme.primaryBlue,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              item['nome_categoria'] ?? 'Serviço',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
+                            Icon(
+                              Icons.verified,
+                              color: AppTheme.primaryBlue,
+                              size: 14,
                             ),
-                            const SizedBox(height: 4),
+                            SizedBox(width: 4),
                             Text(
-                              'Data: ${item['data_agendamento'] ?? "A combinar"}',
-                              style: const TextStyle(
-                                color: AppTheme.textSecondary,
-                                fontSize: 13,
+                              'Verificado',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 10,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      _buildStatusBadge(item['status'] ?? 'ABERTO'),
-                    ],
-                  ),
+                    ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(11, 10, 11, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            nome,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        const Icon(Icons.star, color: Colors.amber, size: 15),
+                        const SizedBox(width: 2),
+                        Text(
+                          totalAvaliacoes == 0
+                              ? 'Novo'
+                              : '${item['media_nota'] ?? '-'}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      localizacao.isEmpty ? 'Atende sua região' : localizacao,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 11,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      totalAvaliacoes == 0
+                          ? 'Conheça o perfil e os serviços'
+                          : '$totalAvaliacoes avaliações',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
                 ),
-              );
-            },
+              ),
+            ],
           ),
-      ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPrestadorImageFallback() {
+    return Container(
+      color: const Color(0xFFEAF2FF),
+      alignment: Alignment.center,
+      child: const Icon(
+        Icons.cleaning_services_outlined,
+        size: 38,
+        color: AppTheme.primaryBlue,
+      ),
     );
   }
 

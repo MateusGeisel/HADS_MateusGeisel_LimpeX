@@ -1,10 +1,13 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
+
 import 'auth_service.dart';
 
 class PrestadorService {
   // Ajustado com /prestadores no final para bater com o backend
-  static const String baseUrl = 'https://hads-mateusgeisel-limpex.onrender.com/prestadores';
+  static const String baseUrl =
+      'https://hads-mateusgeisel-limpex.onrender.com/prestadores';
   final AuthService _authService = AuthService();
 
   // ==========================================
@@ -94,16 +97,18 @@ class PrestadorService {
   // NOVAS FUNCIONALIDADES (VITRINE & SERVIÇOS)
   // ==========================================
 
-  // Listar todos os prestadores para a Vitrine/Catálogo do Contratante
+  // 🟢 PÚBLICO: Listar todos os prestadores para a Vitrine/Catálogo do Contratante
   Future<List<dynamic>> listarPrestadores() async {
     final token = await _authService.getToken();
-    if (token == null) return [];
+
+    final Map<String, String> headers = {'Content-Type': 'application/json'};
+
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
 
     try {
-      final response = await http.get(
-        Uri.parse(baseUrl),
-        headers: {'Authorization': 'Bearer $token'},
-      );
+      final response = await http.get(Uri.parse(baseUrl), headers: headers);
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
@@ -114,7 +119,7 @@ class PrestadorService {
     return [];
   }
 
-  // Buscar serviços cadastrados do prestador logado
+  // Buscar serviços cadastrados do prestador logado (PROTEGIDO)
   Future<List<dynamic>> listarMeusServicos() async {
     final token = await _authService.getToken();
     if (token == null) return [];
@@ -173,12 +178,17 @@ class PrestadorService {
   // Listar categorias de serviços disponíveis para cadastro
   Future<List<dynamic>> listarCategorias() async {
     final token = await _authService.getToken();
-    if (token == null) return [];
+
+    final Map<String, String> headers = {'Content-Type': 'application/json'};
+
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
 
     try {
       final response = await http.get(
         Uri.parse('https://hads-mateusgeisel-limpex.onrender.com/categorias'),
-        headers: {'Authorization': 'Bearer $token'},
+        headers: headers,
       );
 
       if (response.statusCode == 200) {
@@ -212,15 +222,20 @@ class PrestadorService {
     }
   }
 
-  // Buscar perfil detalhado do prestador e a lista dos seus serviços ofertados
+  // 🟢 PÚBLICO: Buscar perfil detalhado do prestador e a lista dos seus serviços ofertados
   Future<Map<String, dynamic>?> buscarPerfilPrestador(int idPrestador) async {
     final token = await _authService.getToken();
-    if (token == null) return null;
+
+    final Map<String, String> headers = {'Content-Type': 'application/json'};
+
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
 
     try {
       final response = await http.get(
         Uri.parse('$baseUrl/$idPrestador'),
-        headers: {'Authorization': 'Bearer $token'},
+        headers: headers,
       );
 
       if (response.statusCode == 200) {
