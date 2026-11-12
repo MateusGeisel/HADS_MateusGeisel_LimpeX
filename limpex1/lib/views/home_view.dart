@@ -165,12 +165,7 @@ class _HomeViewState extends State<HomeView> {
       ),
       builder: (context) {
         return Padding(
-          padding: EdgeInsets.only(
-            top: 24,
-            left: 20,
-            right: 20,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-          ),
+          padding: EdgeInsets.only(top: 24, left: 20, right: 20, bottom: 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,

@@ -145,7 +145,9 @@ export class SolicitacaoRepository {
     try {
       await client.query('BEGIN');
       const pendente = await client.query(
-        `SELECT data_agendamento, observacoes
+        `SELECT
+           to_char(data_agendamento, 'YYYY-MM-DD') AS data_agendamento,
+           observacoes
          FROM solicitacao
          WHERE id_solicitacao = $1
            AND status = 'PENDENTE'
@@ -166,7 +168,10 @@ export class SolicitacaoRepository {
         /Horário (?:solicitado|preferido):\s*(\d{2}:\d{2})/i,
       )?.[1];
       if (horario) {
-        const data = String(pendente.rows[0].data_agendamento).slice(0, 10);
+        const data = String(pendente.rows[0].data_agendamento);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) {
+          throw new Error('Data do agendamento inválida no banco de dados.');
+        }
         await client.query(
           'SELECT pg_advisory_xact_lock($1::integer, hashtext($2));',
           [id_prestador, `${data} ${horario}`],
@@ -177,7 +182,7 @@ export class SolicitacaoRepository {
            WHERE id_prestador = $1
              AND id_solicitacao <> $2
              AND status IN ('ACEITO', 'EM_ANDAMENTO')
-             AND data_agendamento = $3
+             AND data_agendamento::date = $3::date
              AND substring(
                COALESCE(observacoes, '')
                FROM 'Horário [^:]+: ([0-9]{2}:[0-9]{2})'
