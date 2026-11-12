@@ -37,7 +37,6 @@ export class PrestadorController {
       res.status(401).json({ error: 'Usuário não autenticado.' });
       return;
     }
-
     const prestador = await PrestadorRepository.buscarPorUsuario(id_usuario);
     if (!prestador) {
       res.status(403).json({ error: 'Apenas prestadores podem acessar seus serviços.' });
@@ -61,6 +60,10 @@ static async atualizarAgenda(req: AuthenticatedRequest, res: Response): Promise<
       res.status(401).json({ error: 'Usuário não autenticado.' });
       return;
     }
+    if (typeof agenda_disponivel !== 'boolean') {
+      res.status(400).json({ error: 'Informe se a agenda está disponível.' });
+      return;
+    }
 
     const prestador = await PrestadorRepository.buscarPorUsuario(id_usuario);
     if (!prestador) {
@@ -75,6 +78,28 @@ static async atualizarAgenda(req: AuthenticatedRequest, res: Response): Promise<
     res.status(500).json({ error: 'Erro interno ao atualizar agenda.' });
   }
 }
+
+static async buscarStatusAgenda(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const id_usuario = req.userId;
+    if (!id_usuario) {
+      res.status(401).json({ error: 'Usuário não autenticado.' });
+      return;
+    }
+
+    const prestador = await PrestadorRepository.buscarPorUsuario(id_usuario);
+    if (!prestador) {
+      res.status(403).json({ error: 'Prestador não encontrado.' });
+      return;
+    }
+
+    res.status(200).json({ agenda_disponivel: prestador.agenda_disponivel });
+  } catch (error) {
+    console.error('Erro ao buscar disponibilidade da agenda:', error);
+    res.status(500).json({ error: 'Erro interno ao buscar a agenda.' });
+  }
+}
+
   // Buscar perfil público do prestador com seus serviços
   static async buscarPerfil(req: Request, res: Response): Promise<void> {
     try {

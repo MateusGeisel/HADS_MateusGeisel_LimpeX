@@ -14,6 +14,7 @@ prestadorRouter.get('/servicos/meus', authMiddleware, PrestadorController.listar
 prestadorRouter.post('/servicos', authMiddleware, PrestadorController.criarServico);
 prestadorRouter.put('/servicos/:id', authMiddleware, PrestadorController.atualizarServico);
 prestadorRouter.delete('/servicos/:id', authMiddleware, PrestadorController.excluirServico);
+prestadorRouter.get('/agenda', authMiddleware, PrestadorController.buscarStatusAgenda);
 prestadorRouter.patch('/agenda', authMiddleware, PrestadorController.atualizarAgenda);
 
 // 3. Rotas da Vitrine (🟢 PÚBLICAS)

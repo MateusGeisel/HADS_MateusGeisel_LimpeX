@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import 'auth_service.dart';
@@ -31,11 +32,7 @@ class SolicitacaoService {
         body: jsonEncode({
           'id_servico': idServico,
           'data_agendamento': dataAgendamento,
-          'observacoes': [
-            descricaoDetalhada,
-            if (horarioAgendamento.isNotEmpty)
-              'Horário preferido: $horarioAgendamento',
-          ].join('\n'),
+          'observacoes': descricaoDetalhada,
           'id_endereco': idEndereco,
           'id_categoria': idCategoria,
           'descricao_detalhada': descricaoDetalhada,
@@ -90,7 +87,27 @@ class SolicitacaoService {
     return [];
   }
 
-  // Novo: Aceitar uma solicitação
+  Future<List<dynamic>> buscarAgendaPrestador() async {
+    final token = await _authService.getToken();
+    if (token == null) {
+      throw StateError('Entre novamente para acessar sua agenda.');
+    }
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/agenda'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode != 200) {
+      throw StateError('Não foi possível carregar a agenda.');
+    }
+
+    final dados = jsonDecode(response.body);
+    if (dados is! List) {
+      throw const FormatException('Resposta inválida ao carregar a agenda.');
+    }
+    return dados;
+  }
+
   Future<bool> aceitarSolicitacao(int idSolicitacao) async {
     final token = await _authService.getToken();
     if (token == null) return false;
@@ -104,6 +121,23 @@ class SolicitacaoService {
       return response.statusCode == 200;
     } catch (e) {
       print('Erro ao aceitar solicitação: $e');
+      return false;
+    }
+  }
+
+  Future<bool> recusarSolicitacao(int idSolicitacao) async {
+    final token = await _authService.getToken();
+    if (token == null) return false;
+
+    try {
+      final response = await http.patch(
+        Uri.parse('$baseUrl/$idSolicitacao/recusar'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('Erro ao recusar solicitação: $e');
       return false;
     }
   }

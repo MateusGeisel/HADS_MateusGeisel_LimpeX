@@ -7,6 +7,8 @@ const solicitacaoRouter = Router();
 solicitacaoRouter.post('/', authMiddleware, SolicitacaoController.criarSolicitacao);
 solicitacaoRouter.get('/minhas', authMiddleware, SolicitacaoController.listarMinhasSolicitacoes);
 solicitacaoRouter.get('/disponiveis', authMiddleware, SolicitacaoController.listarDisponiveis);
+solicitacaoRouter.get('/agenda', authMiddleware, SolicitacaoController.listarAgendaPrestador);
 solicitacaoRouter.patch('/:id/aceitar', authMiddleware, SolicitacaoController.aceitarSolicitacao);
+solicitacaoRouter.patch('/:id/recusar', authMiddleware, SolicitacaoController.recusarSolicitacao);
 
 export default solicitacaoRouter;

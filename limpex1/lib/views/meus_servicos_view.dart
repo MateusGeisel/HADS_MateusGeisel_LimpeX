@@ -27,6 +27,8 @@ class _MeusServicosViewState extends State<MeusServicosView> {
   String _tipoCobranca = 'HORA';
   bool _agendaDisponivel = true;
   bool _carregando = false;
+  bool _carregandoAgenda = true;
+  bool _atualizandoAgenda = false;
   List<dynamic> _servicos = [];
 
   @override
@@ -34,6 +36,7 @@ class _MeusServicosViewState extends State<MeusServicosView> {
     super.initState();
     _carregarMeusServicos();
     _carregarCategorias();
+    _carregarStatusAgenda();
   }
 
   @override
@@ -72,6 +75,40 @@ class _MeusServicosViewState extends State<MeusServicosView> {
         _servicos = lista;
         _carregando = false;
       });
+    }
+  }
+
+  Future<void> _carregarStatusAgenda() async {
+    final disponivel = await _prestadorService.buscarStatusAgenda();
+    if (!mounted) return;
+    setState(() {
+      _carregandoAgenda = false;
+      if (disponivel != null) _agendaDisponivel = disponivel;
+    });
+    if (disponivel == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não foi possível carregar sua agenda.')),
+      );
+    }
+  }
+
+  Future<void> _alternarAgenda(bool disponivel) async {
+    final valorAnterior = _agendaDisponivel;
+    setState(() {
+      _agendaDisponivel = disponivel;
+      _atualizandoAgenda = true;
+    });
+
+    final sucesso = await _prestadorService.atualizarStatusAgenda(disponivel);
+    if (!mounted) return;
+    setState(() {
+      _atualizandoAgenda = false;
+      if (!sucesso) _agendaDisponivel = valorAnterior;
+    });
+    if (!sucesso) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não foi possível atualizar sua agenda.')),
+      );
     }
   }
 
@@ -494,19 +531,20 @@ class _MeusServicosViewState extends State<MeusServicosView> {
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 subtitle: Text(
-                  _agendaDisponivel
-                      ? 'Clientes podem agendar horários diretamente pelo app.'
-                      : 'Sua agenda está oculta. O contato será tratado via Chat.',
+                  _carregandoAgenda
+                      ? 'Carregando disponibilidade...'
+                      : _agendaDisponivel
+                      ? 'Clientes podem solicitar horários pelo app.'
+                      : 'Sua agenda está fechada para novos pedidos.',
                   style: const TextStyle(
                     color: AppTheme.textSecondary,
                     fontSize: 13,
                   ),
                 ),
                 value: _agendaDisponivel,
-                onChanged: (val) async {
-                  setState(() => _agendaDisponivel = val);
-                  await _prestadorService.atualizarStatusAgenda(val);
-                },
+                onChanged: _carregandoAgenda || _atualizandoAgenda
+                    ? null
+                    : _alternarAgenda,
               ),
             ),
             const SizedBox(height: 24),

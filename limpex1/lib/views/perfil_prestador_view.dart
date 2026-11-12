@@ -90,6 +90,7 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
         builder: (_) => ServicoDetalheView(
           servico: servico,
           nomePrestador: nomePrestador,
+          agendaDisponivel: _perfilData?['agenda_disponivel'] == true,
           onSolicitar: () {
             Navigator.pop(context);
             _solicitarServico(servico);
@@ -118,6 +119,7 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
     final prestador = _perfilData!['prestador'] ?? _perfilData!;
     final List<dynamic> servicos = _perfilData!['servicos'] ?? [];
     final bool isFormalizado = prestador['selo_formalizado'] == true;
+    final bool agendaDisponivel = prestador['agenda_disponivel'] == true;
 
     return Scaffold(
       appBar: AppBar(title: Text(prestador['nome'] ?? 'Perfil do Prestador')),
@@ -229,6 +231,34 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
                     ],
                   ],
                 ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: agendaDisponivel
+                    ? Colors.green.shade50
+                    : Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    agendaDisponivel ? Icons.event_available : Icons.event_busy,
+                    color: agendaDisponivel ? Colors.green : Colors.orange,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      agendaDisponivel
+                          ? 'Este prestador está recebendo solicitações.'
+                          : 'Este prestador não está recebendo solicitações no momento.',
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 24),

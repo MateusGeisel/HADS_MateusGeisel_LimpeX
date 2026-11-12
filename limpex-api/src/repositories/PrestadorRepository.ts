@@ -6,6 +6,7 @@ export class PrestadorRepository {
     const query = `
       SELECT 
         p.id_prestador,
+        p.agenda_disponivel,
         p.selo_formalizado,
         p.optante_mei,
         p.status_validacao,
@@ -44,6 +45,7 @@ export class PrestadorRepository {
     const query = `
       SELECT 
         p.id_prestador,
+        p.agenda_disponivel,
         p.selo_formalizado,
         p.optante_mei,
         p.razao_social,
@@ -70,7 +72,7 @@ export class PrestadorRepository {
 
   // Buscar ID do prestador a partir do ID do usuário autenticado
   static async buscarPorUsuario(id_usuario: number) {
-    const query = `SELECT id_prestador FROM prestador WHERE id_usuario = $1;`;
+    const query = `SELECT id_prestador, agenda_disponivel FROM prestador WHERE id_usuario = $1;`;
     const result = await pool.query(query, [id_usuario]);
     return result.rows[0];
   }

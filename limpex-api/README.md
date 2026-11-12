@@ -48,6 +48,14 @@ O banco de dados do LimpeX é composto pelas seguintes tabelas principais:
 - `GET /prestador/cnpj/:cnpj` — Consulta pública/autenticada de CNPJ via BrasilAPI
 - `POST /prestador/dados-fiscais` — Gravação/atualização de dados fiscais (CPF/CNPJ e optante MEI)
 - `POST /prestador/trilha-mei` — Registro de progresso na trilha guiada e simulador financeiro MEI
+- `GET /prestadores/agenda` e `PATCH /prestadores/agenda` — Consultar e alterar a disponibilidade da agenda do prestador
+
+### 📅 Solicitações e agendamentos (`/solicitacoes`)
+- `POST /solicitacoes` — Cliente solicita um serviço informando data, horário e observações
+- `GET /solicitacoes/minhas` — Consultar solicitações do cliente e seus status
+- `GET /solicitacoes/disponiveis` — Prestador consulta pedidos pendentes compatíveis com sua agenda
+- `GET /solicitacoes/agenda` — Prestador consulta pedidos pendentes e atendimentos confirmados
+- `PATCH /solicitacoes/:id/aceitar` e `PATCH /solicitacoes/:id/recusar` — Responder a um pedido pendente
 
 ### 🩺 Saúde do Sistema
 - `GET /health` — Healthcheck da API e conexão em tempo real com o banco de dados PostgreSQL

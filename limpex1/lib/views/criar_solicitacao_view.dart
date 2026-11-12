@@ -26,6 +26,36 @@ class _CriarSolicitacaoViewState extends State<CriarSolicitacaoView> {
 
   bool _carregando = false;
 
+  Future<void> _selecionarData() async {
+    final hoje = DateUtils.dateOnly(DateTime.now());
+    final data = await showDatePicker(
+      context: context,
+      initialDate: hoje,
+      firstDate: hoje,
+      lastDate: DateTime(hoje.year + 2),
+      helpText: 'Selecione a data do atendimento',
+    );
+    if (data != null) {
+      _dataController.text =
+          '${data.year.toString().padLeft(4, '0')}-'
+          '${data.month.toString().padLeft(2, '0')}-'
+          '${data.day.toString().padLeft(2, '0')}';
+    }
+  }
+
+  Future<void> _selecionarHorario() async {
+    final horario = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+      helpText: 'Selecione o horário desejado',
+    );
+    if (horario != null) {
+      _horarioController.text =
+          '${horario.hour.toString().padLeft(2, '0')}:'
+          '${horario.minute.toString().padLeft(2, '0')}';
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -207,10 +237,13 @@ class _CriarSolicitacaoViewState extends State<CriarSolicitacaoView> {
               const SizedBox(height: 8),
               TextFormField(
                 controller: _dataController,
+                readOnly: true,
+                onTap: _selecionarData,
                 decoration: const InputDecoration(
-                  hintText: 'AAAA-MM-DD (Ex: 2026-10-15)',
+                  hintText: 'Selecione uma data',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.calendar_today),
+                  suffixIcon: Icon(Icons.arrow_drop_down),
                 ),
                 validator: (val) =>
                     val == null || val.isEmpty ? 'Informe a data' : null,
@@ -224,10 +257,13 @@ class _CriarSolicitacaoViewState extends State<CriarSolicitacaoView> {
               const SizedBox(height: 8),
               TextFormField(
                 controller: _horarioController,
+                readOnly: true,
+                onTap: _selecionarHorario,
                 decoration: const InputDecoration(
-                  hintText: 'HH:MM (Ex: 08:00)',
+                  hintText: 'Selecione um horário',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.access_time),
+                  suffixIcon: Icon(Icons.arrow_drop_down),
                 ),
                 validator: (val) =>
                     val == null || val.isEmpty ? 'Informe o horário' : null,

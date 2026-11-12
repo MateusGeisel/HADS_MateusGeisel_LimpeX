@@ -11,6 +11,7 @@ import 'prestador_formalizacao_view.dart';
 import 'trilha_mei_view.dart';
 import 'criar_solicitacao_view.dart';
 import 'perfil_prestador_view.dart';
+import 'prestador_agenda_view.dart';
 import 'meus_servicos_view.dart';
 
 class HomeView extends StatefulWidget {
@@ -105,7 +106,7 @@ class _HomeViewState extends State<HomeView> {
     if (isPrestador && index == 2) {
       await Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => const MeusServicosView()),
+        MaterialPageRoute(builder: (_) => const PrestadorAgendaView()),
       );
       if (mounted) setState(() => _selectedNavIndex = 0);
       return;
@@ -155,6 +156,7 @@ class _HomeViewState extends State<HomeView> {
   }
 
   void _mostrarDetalhesSolicitacao(Map<String, dynamic> item) {
+    final messenger = ScaffoldMessenger.of(context);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -233,7 +235,8 @@ class _HomeViewState extends State<HomeView> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'Data: ${item['data_agendamento'] ?? "A combinar"}',
+                    'Data: ${_formatarDataAgendamento(item['data_agendamento'])}'
+                    '${item['horario_agendamento'] == null ? '' : ' às ${item['horario_agendamento']}'}',
                     style: const TextStyle(color: AppTheme.textSecondary),
                   ),
                 ],
@@ -257,48 +260,85 @@ class _HomeViewState extends State<HomeView> {
                 ),
               ),
               const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green.shade700,
-                    foregroundColor: Colors.white,
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.close),
+                      label: const Text('Recusar'),
+                      onPressed: () async {
+                        Navigator.pop(context);
+                        final id = int.tryParse(
+                          item['id_solicitacao']?.toString() ?? '',
+                        );
+                        if (id == null) return;
+                        final sucesso = await _solicitacaoService
+                            .recusarSolicitacao(id);
+                        if (!mounted) return;
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              sucesso
+                                  ? 'Solicitação recusada.'
+                                  : 'Erro ao recusar a solicitação.',
+                            ),
+                            backgroundColor: sucesso
+                                ? Colors.green
+                                : Colors.red,
+                          ),
+                        );
+                        if (sucesso) _carregarDados();
+                      },
+                    ),
                   ),
-                  icon: const Icon(Icons.check_circle_outline),
-                  label: const Text(
-                    'Aceitar Serviço',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green.shade700,
+                        foregroundColor: Colors.white,
+                      ),
+                      icon: const Icon(Icons.check_circle_outline),
+                      label: const Text('Aceitar'),
+                      onPressed: () async {
+                        Navigator.pop(context);
+                        final id = int.tryParse(
+                          item['id_solicitacao']?.toString() ?? '',
+                        );
+                        if (id == null) return;
+                        final sucesso = await _solicitacaoService
+                            .aceitarSolicitacao(id);
+                        if (!mounted) return;
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              sucesso
+                                  ? 'Atendimento confirmado na sua agenda.'
+                                  : 'Erro ao aceitar o serviço.',
+                            ),
+                            backgroundColor: sucesso
+                                ? Colors.green
+                                : Colors.red,
+                          ),
+                        );
+                        if (sucesso) _carregarDados();
+                      },
+                    ),
                   ),
-                  onPressed: () async {
-                    Navigator.pop(context);
-                    final sucesso = await _solicitacaoService
-                        .aceitarSolicitacao(item['id_solicitacao']);
-                    if (!mounted) return;
-                    if (sucesso) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Serviço aceito com sucesso!'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                      _carregarDados();
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Erro ao aceitar o serviço.'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                    }
-                  },
-                ),
+                ],
               ),
             ],
           ),
         );
       },
     );
+  }
+
+  String _formatarDataAgendamento(dynamic valor) {
+    final data = DateTime.tryParse(valor?.toString() ?? '');
+    if (data == null) return 'A combinar';
+    return '${data.day.toString().padLeft(2, '0')}/'
+        '${data.month.toString().padLeft(2, '0')}/${data.year}';
   }
 
   Widget _buildStatusBadge(String status) {
@@ -308,9 +348,12 @@ class _HomeViewState extends State<HomeView> {
     if (status == 'CONCLUIDO') {
       bg = Colors.green.shade50;
       text = Colors.green.shade800;
-    } else if (status == 'EM_ANDAMENTO') {
+    } else if (status == 'EM_ANDAMENTO' || status == 'ACEITO') {
       bg = Colors.blue.shade50;
       text = Colors.blue.shade800;
+    } else if (status == 'RECUSADO') {
+      bg = Colors.red.shade50;
+      text = Colors.red.shade800;
     }
 
     return Container(
@@ -784,7 +827,9 @@ class _HomeViewState extends State<HomeView> {
                     ),
                     title: Text(item['nome_categoria'] ?? 'Serviço'),
                     subtitle: Text(
-                      'Data: ${item['data_agendamento'] ?? "A combinar"}',
+                      'Data: ${_formatarDataAgendamento(item['data_agendamento'])}'
+                      '${item['horario_agendamento'] == null ? '' : ' às ${item['horario_agendamento']}'}'
+                      '${item['nome_prestador'] == null ? '' : '\nPrestador: ${item['nome_prestador']}'}',
                     ),
                     trailing: _buildStatusBadge(item['status'] ?? 'ABERTO'),
                   ),
@@ -990,7 +1035,22 @@ class _HomeViewState extends State<HomeView> {
             );
           },
           icon: const Icon(Icons.cleaning_services_outlined),
-          label: const Text('Gerenciar Meus Serviços & Agenda'),
+          label: const Text('Gerenciar Meus Serviços'),
+        ),
+        const SizedBox(height: 10),
+        OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppTheme.prestadorAccent,
+            side: const BorderSide(color: AppTheme.secondaryYellow, width: 1.5),
+          ),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const PrestadorAgendaView()),
+            );
+          },
+          icon: const Icon(Icons.calendar_month_outlined),
+          label: const Text('Abrir Agenda de Atendimentos'),
         ),
         const SizedBox(height: 10),
 

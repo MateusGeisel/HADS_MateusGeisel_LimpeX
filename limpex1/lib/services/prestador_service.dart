@@ -316,6 +316,26 @@ class PrestadorService {
   }
 
   // Alternar agenda aberta/fechada no aplicativo
+  Future<bool?> buscarStatusAgenda() async {
+    final token = await _authService.getToken();
+    if (token == null) return null;
+
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/agenda'),
+        headers: _headersAutenticados(token),
+      );
+
+      if (response.statusCode == 200) {
+        final dados = jsonDecode(response.body) as Map<String, dynamic>;
+        return dados['agenda_disponivel'] == true;
+      }
+    } catch (e) {
+      debugPrint('Erro ao buscar disponibilidade da agenda: $e');
+    }
+    return null;
+  }
+
   Future<bool> atualizarStatusAgenda(bool agendaDisponivel) async {
     final token = await _authService.getToken();
     if (token == null) return false;

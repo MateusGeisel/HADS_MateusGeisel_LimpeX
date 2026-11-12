@@ -7,12 +7,14 @@ class ServicoDetalheView extends StatefulWidget {
   final Map<String, dynamic> servico;
   final String nomePrestador;
   final VoidCallback onSolicitar;
+  final bool agendaDisponivel;
 
   const ServicoDetalheView({
     super.key,
     required this.servico,
     required this.nomePrestador,
     required this.onSolicitar,
+    required this.agendaDisponivel,
   });
 
   @override
@@ -160,9 +162,13 @@ class _ServicoDetalheViewState extends State<ServicoDetalheView> {
         child: SizedBox(
           height: 50,
           child: ElevatedButton.icon(
-            onPressed: widget.onSolicitar,
+            onPressed: widget.agendaDisponivel ? widget.onSolicitar : null,
             icon: const Icon(Icons.add_circle_outline),
-            label: const Text('Solicitar este serviço'),
+            label: Text(
+              widget.agendaDisponivel
+                  ? 'Solicitar este serviço'
+                  : 'Agenda fechada no momento',
+            ),
           ),
         ),
       ),
