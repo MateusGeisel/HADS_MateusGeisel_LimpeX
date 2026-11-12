@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../services/prestador_service.dart';
-import '../services/auth_service.dart';
 import '../main.dart';
-import 'login_view.dart';
+import '../services/auth_service.dart';
+import '../services/prestador_service.dart';
 import 'criar_solicitacao_view.dart';
+import 'login_view.dart';
 import 'servico_detalhe_view.dart';
 
 class PerfilPrestadorView extends StatefulWidget {
@@ -39,14 +39,14 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
     );
     final dados = await perfilFuture;
     final dadosAvaliacoes = await avaliacoesFuture;
-    if (mounted) {
-      setState(() {
-        _perfilData = dados;
-        _erroAvaliacoes = dadosAvaliacoes == null;
-        _avaliacoes = dadosAvaliacoes?['avaliacoes'] as List<dynamic>? ?? [];
-        _carregando = false;
-      });
-    }
+    if (!mounted) return;
+
+    setState(() {
+      _perfilData = dados;
+      _erroAvaliacoes = dadosAvaliacoes == null;
+      _avaliacoes = dadosAvaliacoes?['avaliacoes'] as List<dynamic>? ?? [];
+      _carregando = false;
+    });
   }
 
   String _formatarDataAvaliacao(dynamic valor) {
@@ -54,6 +54,36 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
     if (data == null) return '';
     return '${data.day.toString().padLeft(2, '0')}/'
         '${data.month.toString().padLeft(2, '0')}/${data.year}';
+  }
+
+  String _formatarValor(dynamic valor) {
+    final numero = double.tryParse(
+      valor?.toString().replaceAll(',', '.') ?? '',
+    );
+    if (numero == null) return '—';
+    return numero.toStringAsFixed(2).replaceAll('.', ',');
+  }
+
+  String _formatarCobranca(dynamic valor) {
+    switch (valor?.toString().toUpperCase()) {
+      case 'TURNO':
+        return 'turno';
+      case 'FIXO':
+        return 'serviço';
+      default:
+        return 'hora';
+    }
+  }
+
+  int _notaDaAvaliacao(dynamic avaliacao) {
+    if (avaliacao is! Map) return 0;
+    return int.tryParse(avaliacao['nota']?.toString() ?? '') ?? 0;
+  }
+
+  String _iniciais(String nome) {
+    final partes = nome.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty);
+    if (partes.isEmpty) return 'C';
+    return partes.take(2).map((parte) => parte[0].toUpperCase()).join();
   }
 
   Future<void> _solicitarServico(Map<String, dynamic> servico) async {
@@ -99,6 +129,7 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
   void _abrirDetalhesServico(
     Map<String, dynamic> servico,
     String nomePrestador,
+    bool agendaDisponivel,
   ) {
     Navigator.push(
       context,
@@ -106,11 +137,874 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
         builder: (_) => ServicoDetalheView(
           servico: servico,
           nomePrestador: nomePrestador,
-          agendaDisponivel: _perfilData?['agenda_disponivel'] == true,
+          agendaDisponivel: agendaDisponivel,
           onSolicitar: () {
             Navigator.pop(context);
             _solicitarServico(servico);
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title, String subtitle) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            color: AppTheme.textPrimary,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          subtitle,
+          style: const TextStyle(
+            color: AppTheme.textSecondary,
+            fontSize: 14,
+            height: 1.4,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHeroCard({
+    required String nome,
+    required String? imagem,
+    required bool formalizado,
+    required int totalAvaliacoes,
+    required String mediaNota,
+  }) {
+    return Card(
+      margin: EdgeInsets.zero,
+      elevation: 3,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(22),
+        side: BorderSide(color: AppTheme.primaryBlue.withValues(alpha: 0.12)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Stack(
+            children: [
+              SizedBox(
+                height: 230,
+                width: double.infinity,
+                child: imagem == null
+                    ? _heroImageFallback()
+                    : Image.network(
+                        imagem,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => _heroImageFallback(),
+                      ),
+              ),
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.04),
+                        Colors.black.withValues(alpha: 0.72),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              if (formalizado)
+                Positioned(
+                  top: 16,
+                  right: 16,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(
+                        color: AppTheme.primaryBlue.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.verified,
+                          color: AppTheme.primaryBlue,
+                          size: 17,
+                        ),
+                        SizedBox(width: 6),
+                        Text(
+                          'Profissional verificado',
+                          style: TextStyle(
+                            color: AppTheme.textPrimary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              Positioned(
+                left: 22,
+                right: 22,
+                bottom: 20,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'PROFISSIONAL LIMPEX',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      nome,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        height: 1.1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: AppTheme.secondaryYellow.withValues(alpha: 0.22),
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                  child: const Icon(
+                    Icons.star_rounded,
+                    color: AppTheme.prestadorAccent,
+                    size: 26,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        totalAvaliacoes == 0
+                            ? 'Reputação em construção'
+                            : 'Avaliação dos clientes',
+                        style: const TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        totalAvaliacoes == 0
+                            ? 'Ainda sem avaliações'
+                            : '$mediaNota de 5  •  $totalAvaliacoes '
+                                  '${totalAvaliacoes == 1 ? 'avaliação' : 'avaliações'}',
+                        style: const TextStyle(
+                          color: AppTheme.textPrimary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (formalizado)
+                  const Tooltip(
+                    message: 'Dados de formalização verificados',
+                    child: Icon(
+                      Icons.shield_outlined,
+                      color: AppTheme.primaryBlue,
+                      size: 24,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _heroImageFallback() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF1A73E8), Color(0xFF164A8A)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: const Center(
+        child: Icon(
+          Icons.home_repair_service_outlined,
+          color: Colors.white70,
+          size: 64,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAvailability(bool disponivel) {
+    final cor = disponivel ? const Color(0xFF18794E) : const Color(0xFF9A5B00);
+    final fundo = disponivel
+        ? const Color(0xFFEAF7EF)
+        : const Color(0xFFFFF5E5);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: fundo,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cor.withValues(alpha: 0.16)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.8),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              disponivel ? Icons.event_available : Icons.event_busy,
+              color: cor,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  disponivel ? 'Agenda aberta' : 'Agenda fechada',
+                  style: TextStyle(
+                    color: cor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  disponivel
+                      ? 'Este profissional está recebendo solicitações.'
+                      : 'No momento, não está recebendo novas solicitações.',
+                  style: const TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 13,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildServiceCard({
+    required Map<String, dynamic> servico,
+    required String nomePrestador,
+    required bool agendaDisponivel,
+  }) {
+    final fotos = PrestadorService.extrairFotos(
+      servico['fotos'] ??
+          servico['foto_url'] ??
+          servico['imagem_url'] ??
+          servico['imagens'],
+    );
+    final nome = servico['nome']?.toString() ?? 'Serviço profissional';
+    final descricao = servico['descricao']?.toString().trim() ?? '';
+    final categoria = servico['nome_categoria']?.toString().trim() ?? '';
+    final modalidade = servico['modalidade']?.toString().trim() ?? '';
+
+    return Card(
+      margin: EdgeInsets.zero,
+      elevation: 2,
+      shadowColor: Colors.black.withValues(alpha: 0.07),
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: AppTheme.primaryBlue.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: 168,
+            width: double.infinity,
+            child: fotos.isEmpty
+                ? Container(
+                    color: AppTheme.primaryBlue.withValues(alpha: 0.07),
+                    child: const Center(
+                      child: Icon(
+                        Icons.home_repair_service_outlined,
+                        color: AppTheme.primaryBlue,
+                        size: 46,
+                      ),
+                    ),
+                  )
+                : Image.network(
+                    fotos.first,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => Container(
+                      color: AppTheme.primaryBlue.withValues(alpha: 0.07),
+                      child: const Center(
+                        child: Icon(
+                          Icons.broken_image_outlined,
+                          color: AppTheme.textSecondary,
+                          size: 42,
+                        ),
+                      ),
+                    ),
+                  ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 15, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (categoria.isNotEmpty)
+                      _buildBadge(categoria, AppTheme.primaryBlue),
+                    if (modalidade.isNotEmpty)
+                      _buildBadge(
+                        modalidade.replaceAll('_', ' ').toLowerCase(),
+                        AppTheme.prestadorAccent,
+                      ),
+                  ],
+                ),
+                if (categoria.isNotEmpty || modalidade.isNotEmpty)
+                  const SizedBox(height: 10),
+                Text(
+                  nome,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    height: 1.25,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  descricao.isEmpty
+                      ? 'Consulte os detalhes deste atendimento.'
+                      : descricao,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 13,
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    const Icon(
+                      Icons.sell_outlined,
+                      color: AppTheme.primaryBlue,
+                      size: 19,
+                    ),
+                    const SizedBox(width: 7),
+                    Expanded(
+                      child: RichText(
+                        text: TextSpan(
+                          style: const TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 12,
+                          ),
+                          children: [
+                            const TextSpan(text: 'A partir de '),
+                            TextSpan(
+                              text: 'R\$ ${_formatarValor(servico['valor'])}',
+                              style: const TextStyle(
+                                color: AppTheme.textPrimary,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            TextSpan(
+                              text:
+                                  ' / ${_formatarCobranca(servico['tipo_cobranca'])}',
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: agendaDisponivel
+                        ? () => _solicitarServico(servico)
+                        : null,
+                    icon: const Icon(Icons.calendar_month_outlined),
+                    label: Text(
+                      agendaDisponivel
+                          ? 'Solicitar serviço'
+                          : 'Agenda indisponível',
+                    ),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () => _abrirDetalhesServico(
+                      servico,
+                      nomePrestador,
+                      agendaDisponivel,
+                    ),
+                    icon: const Icon(Icons.open_in_new, size: 16),
+                    label: const Text('Ver detalhes'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBadge(String texto, Color cor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: cor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: cor.withValues(alpha: 0.16)),
+      ),
+      child: Text(
+        texto,
+        style: TextStyle(color: cor, fontSize: 11, fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+
+  Widget _buildServicesSection({
+    required List<dynamic> servicos,
+    required String nomePrestador,
+    required bool agendaDisponivel,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle(
+          'Serviços disponíveis',
+          'Escolha o atendimento ideal e solicite diretamente ao profissional.',
+        ),
+        const SizedBox(height: 16),
+        if (servicos.isEmpty)
+          _buildEmptyState(
+            icon: Icons.home_repair_service_outlined,
+            title: 'Nenhum serviço cadastrado',
+            message: 'Este profissional ainda não adicionou serviços específicos ao perfil.',
+          )
+        else
+          LayoutBuilder(
+            builder: (context, constraints) {
+              const spacing = 16.0;
+              final colunas = constraints.maxWidth >= 720 ? 2 : 1;
+              final largura =
+                  (constraints.maxWidth - spacing * (colunas - 1)) / colunas;
+              return Wrap(
+                spacing: spacing,
+                runSpacing: spacing,
+                children: [
+                  for (final item in servicos)
+                    SizedBox(
+                      width: largura,
+                      child: _buildServiceCard(
+                        servico: Map<String, dynamic>.from(item as Map),
+                        nomePrestador: nomePrestador,
+                        agendaDisponivel: agendaDisponivel,
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+      ],
+    );
+  }
+
+  Widget _buildRatingDistribution() {
+    final contagens = <int, int>{
+      for (var nota = 5; nota >= 1; nota--)
+        nota: _avaliacoes
+            .where((item) => _notaDaAvaliacao(item) == nota)
+            .length,
+    };
+    final total = _avaliacoes.length;
+    if (total == 0) return const SizedBox.shrink();
+
+    return Card(
+      margin: EdgeInsets.zero,
+      elevation: 0,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: AppTheme.primaryBlue.withValues(alpha: 0.1)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            for (var nota = 5; nota >= 1; nota--)
+              Padding(
+                padding: EdgeInsets.only(bottom: nota == 1 ? 0 : 7),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 18,
+                      child: Text(
+                        '$nota',
+                        style: const TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const Icon(Icons.star, color: Colors.amber, size: 15),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: LinearProgressIndicator(
+                          value: contagens[nota]! / total,
+                          minHeight: 7,
+                          backgroundColor: AppTheme.backgroundColor,
+                          color: AppTheme.primaryBlue,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    SizedBox(
+                      width: 22,
+                      child: Text(
+                        '${contagens[nota]}',
+                        textAlign: TextAlign.end,
+                        style: const TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReviewCard(Map<String, dynamic> avaliacao) {
+    final nome = avaliacao['nome_avaliador']?.toString() ?? 'Cliente';
+    final comentario = avaliacao['comentario']?.toString().trim() ?? '';
+    final servico = avaliacao['nome_servico']?.toString().trim() ?? '';
+    final nota = _notaDaAvaliacao(avaliacao);
+    final data = _formatarDataAvaliacao(avaliacao['criado_em']);
+
+    return Card(
+      margin: EdgeInsets.zero,
+      elevation: 1,
+      shadowColor: Colors.black.withValues(alpha: 0.05),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: AppTheme.primaryBlue.withValues(alpha: 0.1)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 21,
+                  backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.09),
+                  child: Text(
+                    _iniciais(nome),
+                    style: const TextStyle(
+                      color: AppTheme.primaryBlue,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        nome,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppTheme.textPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      if (servico.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          servico,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                if (data.isNotEmpty)
+                  Text(
+                    data,
+                    style: const TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 11,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                for (var estrela = 1; estrela <= 5; estrela++)
+                  Icon(
+                    estrela <= nota ? Icons.star_rounded : Icons.star_outline,
+                    size: 19,
+                    color: Colors.amber.shade700,
+                  ),
+                const SizedBox(width: 6),
+                Text(
+                  '$nota/5',
+                  style: const TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+            if (comentario.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Text(
+                comentario,
+                style: const TextStyle(
+                  color: AppTheme.textPrimary,
+                  fontSize: 14,
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReviewsSection({
+    required int totalAvaliacoes,
+    required String mediaNota,
+  }) {
+    final media = double.tryParse(mediaNota.replaceAll(',', '.')) ?? 0;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(height: 1, color: Color(0xFFDCE3EB)),
+        const SizedBox(height: 28),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: _buildSectionTitle(
+                'Avaliações dos clientes',
+                'Experiências de quem já contratou este profissional.',
+              ),
+            ),
+            if (totalAvaliacoes > 0)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 9,
+                ),
+                decoration: BoxDecoration(
+                  color: AppTheme.secondaryYellow.withValues(alpha: 0.22),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: AppTheme.prestadorAccent.withValues(alpha: 0.14),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.star_rounded,
+                      color: AppTheme.prestadorAccent,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${media.toStringAsFixed(1)}  •  $totalAvaliacoes',
+                      style: const TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        if (_erroAvaliacoes)
+          _buildEmptyState(
+            icon: Icons.cloud_off_outlined,
+            title: 'Avaliações indisponíveis',
+            message: 'Não foi possível carregar as avaliações agora.',
+          )
+        else if (_avaliacoes.isEmpty)
+          _buildEmptyState(
+            icon: Icons.rate_review_outlined,
+            title: 'Ainda sem avaliações',
+            message: 'Este prestador ainda não recebeu avaliações de clientes.',
+          )
+        else ...[
+          _buildRatingDistribution(),
+          const SizedBox(height: 14),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final colunas = constraints.maxWidth >= 720 ? 2 : 1;
+              if (colunas == 1) {
+                return Column(
+                  children: [
+                    for (final item in _avaliacoes) ...[
+                      _buildReviewCard(Map<String, dynamic>.from(item as Map)),
+                      const SizedBox(height: 12),
+                    ],
+                  ],
+                );
+              }
+
+              const spacing = 14.0;
+              final largura = (constraints.maxWidth - spacing) / 2;
+              return Wrap(
+                spacing: spacing,
+                runSpacing: spacing,
+                children: [
+                  for (final item in _avaliacoes)
+                    SizedBox(
+                      width: largura,
+                      child: _buildReviewCard(
+                        Map<String, dynamic>.from(item as Map),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildEmptyState({
+    required IconData icon,
+    required String title,
+    required String message,
+  }) {
+    return Card(
+      margin: EdgeInsets.zero,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: AppTheme.primaryBlue.withValues(alpha: 0.1)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: AppTheme.primaryBlue.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: AppTheme.primaryBlue),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: AppTheme.textPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    message,
+                    style: const TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -132,414 +1026,64 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
       );
     }
 
-    final prestador = _perfilData!['prestador'] ?? _perfilData!;
-    final List<dynamic> servicos = _perfilData!['servicos'] ?? [];
-    final bool isFormalizado = prestador['selo_formalizado'] == true;
-    final bool agendaDisponivel = prestador['agenda_disponivel'] == true;
+    final prestador = Map<String, dynamic>.from(
+      (_perfilData!['prestador'] ?? _perfilData!) as Map,
+    );
+    final servicos = (_perfilData!['servicos'] as List<dynamic>?) ?? [];
+    final nome = prestador['nome']?.toString() ?? 'Prestador de serviços';
+    final formalizado = prestador['selo_formalizado'] == true;
+    final agendaDisponivel = prestador['agenda_disponivel'] == true;
     final totalAvaliacoes =
         int.tryParse(prestador['total_avaliacoes']?.toString() ?? '0') ?? 0;
     final mediaNota = prestador['media_nota']?.toString() ?? '0.0';
+    final fotosServico = servicos.isEmpty
+        ? <String>[]
+        : PrestadorService.extrairFotos(
+            (servicos.first as Map)['fotos'] ??
+                (servicos.first as Map)['foto_url'] ??
+                (servicos.first as Map)['imagem_url'] ??
+                (servicos.first as Map)['imagens'],
+          );
+    final fotoPerfil = prestador['foto_perfil']?.toString();
+    final imagemHero = fotosServico.isNotEmpty
+        ? fotosServico.first
+        : (fotoPerfil != null && fotoPerfil.isNotEmpty ? fotoPerfil : null);
 
     return Scaffold(
-      appBar: AppBar(title: Text(prestador['nome'] ?? 'Perfil do Prestador')),
+      appBar: AppBar(title: const Text('Perfil do profissional')),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Card Principal do Prestador
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  children: [
-                    Stack(
-                      children: [
-                        CircleAvatar(
-                          radius: 40,
-                          backgroundColor: AppTheme.secondaryYellow.withValues(
-                            alpha: 0.2,
-                          ),
-                          child: const Icon(
-                            Icons.person,
-                            size: 48,
-                            color: AppTheme.prestadorAccent,
-                          ),
-                        ),
-                        if (isFormalizado)
-                          const Positioned(
-                            right: 0,
-                            bottom: 0,
-                            child: CircleAvatar(
-                              radius: 12,
-                              backgroundColor: Colors.white,
-                              child: Icon(
-                                Icons.verified,
-                                color: AppTheme.primaryBlue,
-                                size: 20,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      prestador['nome'] ?? 'Prestador de Serviços',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.star, color: Colors.amber, size: 18),
-                        Text(
-                          totalAvaliacoes == 0 ? ' Novo ' : ' $mediaNota ',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
-                        ),
-                        Text(
-                          totalAvaliacoes == 0
-                              ? '(sem avaliações)'
-                              : '($totalAvaliacoes avaliações)',
-                          style: TextStyle(
-                            color: AppTheme.textSecondary,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (isFormalizado) ...[
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.blue.shade200),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.verified,
-                              color: AppTheme.primaryBlue,
-                              size: 16,
-                            ),
-                            SizedBox(width: 6),
-                            Text(
-                              'Prestador Formalizado (MEI / CNPJ)',
-                              style: TextStyle(
-                                color: AppTheme.primaryBlue,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: agendaDisponivel
-                    ? Colors.green.shade50
-                    : Colors.orange.shade50,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 960),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 36),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    agendaDisponivel ? Icons.event_available : Icons.event_busy,
-                    color: agendaDisponivel ? Colors.green : Colors.orange,
+                  _buildHeroCard(
+                    nome: nome,
+                    imagem: imagemHero,
+                    formalizado: formalizado,
+                    totalAvaliacoes: totalAvaliacoes,
+                    mediaNota: mediaNota,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      agendaDisponivel
-                          ? 'Este prestador está recebendo solicitações.'
-                          : 'Este prestador não está recebendo solicitações no momento.',
-                    ),
+                  const SizedBox(height: 16),
+                  _buildAvailability(agendaDisponivel),
+                  const SizedBox(height: 30),
+                  _buildServicesSection(
+                    servicos: servicos,
+                    nomePrestador: nome,
+                    agendaDisponivel: agendaDisponivel,
+                  ),
+                  const SizedBox(height: 30),
+                  _buildReviewsSection(
+                    totalAvaliacoes: totalAvaliacoes,
+                    mediaNota: mediaNota,
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-
-            const Text(
-              'Avaliações de clientes',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            if (_erroAvaliacoes)
-              const Text(
-                'Não foi possível carregar as avaliações.',
-                style: TextStyle(color: AppTheme.textSecondary),
-              )
-            else if (_avaliacoes.isEmpty)
-              const Text(
-                'Este profissional ainda não recebeu avaliações.',
-                style: TextStyle(color: AppTheme.textSecondary),
-              )
-            else
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _avaliacoes.length,
-                itemBuilder: (context, index) {
-                  final avaliacao = Map<String, dynamic>.from(
-                    _avaliacoes[index] as Map,
-                  );
-                  final nota =
-                      int.tryParse(avaliacao['nota']?.toString() ?? '') ?? 0;
-                  final comentario =
-                      avaliacao['comentario']?.toString().trim() ?? '';
-
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.person_outline,
-                                color: AppTheme.primaryBlue,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  avaliacao['nome_avaliador'] ?? 'Cliente',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                              Text('$nota/5'),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              for (var estrela = 1; estrela <= 5; estrela++)
-                                Icon(
-                                  estrela <= nota
-                                      ? Icons.star
-                                      : Icons.star_border,
-                                  size: 18,
-                                  color: Colors.amber.shade700,
-                                ),
-                              if (_formatarDataAvaliacao(avaliacao['criado_em'])
-                                  .isNotEmpty) ...[
-                                const SizedBox(width: 8),
-                                Text(
-                                  _formatarDataAvaliacao(
-                                    avaliacao['criado_em'],
-                                  ),
-                                  style: const TextStyle(
-                                    color: AppTheme.textSecondary,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                          if (comentario.isNotEmpty) ...[
-                            const SizedBox(height: 8),
-                            Text(comentario),
-                          ],
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            const SizedBox(height: 24),
-
-            const Text(
-              'Serviços Ofertados por Este Profissional',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-
-            if (servicos.isEmpty)
-              Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Padding(
-                  padding: EdgeInsets.all(20.0),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline, color: AppTheme.primaryBlue),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Este prestador ainda não cadastrou serviços específicos.',
-                          style: TextStyle(color: AppTheme.textSecondary),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              )
-            else
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: servicos.length,
-                itemBuilder: (context, index) {
-                  final item = servicos[index];
-                  final fotos = PrestadorService.extrairFotos(
-                    item['fotos'] ??
-                        item['foto_url'] ??
-                        item['imagem_url'] ??
-                        item['imagens'],
-                  );
-
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: InkWell(
-                      onTap: () => _abrirDetalhesServico(
-                        Map<String, dynamic>.from(item),
-                        prestador['nome']?.toString() ?? 'Prestador',
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (fotos.isNotEmpty) ...[
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Image.network(
-                                  fotos.first,
-                                  width: double.infinity,
-                                  height: 170,
-                                  fit: BoxFit.cover,
-                                  loadingBuilder: (context, child, progress) {
-                                    if (progress == null) return child;
-                                    return const SizedBox(
-                                      height: 170,
-                                      child: Center(
-                                        child: CircularProgressIndicator(),
-                                      ),
-                                    );
-                                  },
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      Container(
-                                        height: 170,
-                                        color: Colors.grey.shade200,
-                                        child: const Center(
-                                          child: Icon(
-                                            Icons.broken_image_outlined,
-                                            size: 40,
-                                          ),
-                                        ),
-                                      ),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                            ],
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    item['nome'] ?? 'Serviço',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.green.shade50,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    'R\$ ${item['valor']} / ${item['tipo_cobranca'] == "TURNO"
-                                        ? "Turno"
-                                        : item['tipo_cobranca'] == "FIXO"
-                                        ? "Fixo"
-                                        : "Hora"}',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.green.shade800,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            if (item['descricao'] != null &&
-                                item['descricao'].toString().isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              Text(
-                                item['descricao'],
-                                style: const TextStyle(
-                                  color: AppTheme.textSecondary,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                            const SizedBox(height: 14),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                Text(
-                                  'Ver detalhes',
-                                  style: TextStyle(
-                                    color: AppTheme.primaryBlue,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                const Icon(
-                                  Icons.arrow_forward,
-                                  size: 18,
-                                  color: AppTheme.primaryBlue,
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-          ],
+          ),
         ),
       ),
     );

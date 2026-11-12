@@ -88,9 +88,12 @@ export class AvaliacaoRepository {
          a.nota,
          a.comentario,
          a.criado_em,
-         u.nome AS nome_avaliador
+         u.nome AS nome_avaliador,
+         ser.nome AS nome_servico
        FROM avaliacao a
        JOIN prestador p ON p.id_usuario = a.id_avaliado
+       LEFT JOIN solicitacao s ON s.id_solicitacao = a.id_solicitacao
+       LEFT JOIN servico ser ON ser.id_servico = s.id_servico
        LEFT JOIN usuario u ON u.id_usuario = a.id_avaliador
        WHERE p.id_prestador = $1
        ORDER BY a.criado_em DESC, a.id_avaliacao DESC;`,
