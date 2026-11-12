@@ -26,7 +26,7 @@ export class PrestadorRepository {
         u.telefone,
         l.cidade,
         l.bairro,
-        COALESCE(AVG(a.nota), 5.0)::NUMERIC(2,1) as media_nota,
+        COALESCE(AVG(a.nota), 0.0)::NUMERIC(2,1) as media_nota,
         COUNT(a.id_avaliacao) as total_avaliacoes
       FROM prestador p
       JOIN usuario u ON p.id_usuario = u.id_usuario
@@ -57,7 +57,7 @@ export class PrestadorRepository {
         u.foto_perfil,
         l.cidade,
         l.bairro,
-        COALESCE(AVG(a.nota), 5.0)::NUMERIC(2,1) as media_nota,
+        COALESCE(AVG(a.nota), 0.0)::NUMERIC(2,1) as media_nota,
         COUNT(a.id_avaliacao) as total_avaliacoes
       FROM prestador p
       JOIN usuario u ON p.id_usuario = u.id_usuario

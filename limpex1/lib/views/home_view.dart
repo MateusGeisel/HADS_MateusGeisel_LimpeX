@@ -10,6 +10,7 @@ import 'add_address_view.dart';
 import 'prestador_formalizacao_view.dart';
 import 'trilha_mei_view.dart';
 import 'criar_solicitacao_view.dart';
+import 'avaliar_servico_view.dart';
 import 'perfil_prestador_view.dart';
 import 'prestador_agenda_view.dart';
 import 'meus_servicos_view.dart';
@@ -152,6 +153,28 @@ class _HomeViewState extends State<HomeView> {
     );
     if (result == true && mounted) {
       _carregarDados();
+    }
+  }
+
+  Future<void> _abrirAvaliacao(Map<String, dynamic> item) async {
+    final id = int.tryParse(item['id_solicitacao']?.toString() ?? '');
+    if (id == null) return;
+
+    final resultado = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AvaliarServicoView(
+          idSolicitacao: id,
+          nomePrestador: item['nome_prestador']?.toString() ?? 'prestador',
+        ),
+      ),
+    );
+    if (resultado == true && mounted) {
+      await _carregarDados();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Avaliação registrada. Obrigado!')),
+      );
     }
   }
 
@@ -807,26 +830,88 @@ class _HomeViewState extends State<HomeView> {
               itemCount: _solicitacoes.length,
               itemBuilder: (context, index) {
                 final item = _solicitacoes[index];
+                final status = item['status']?.toString() ?? 'PENDENTE';
+                final avaliada = item['avaliada'] == true;
+                final nota = int.tryParse(
+                  item['avaliacao_nota']?.toString() ?? '',
+                );
+                final comentario =
+                    item['avaliacao_comentario']?.toString().trim() ?? '';
                 return Card(
                   margin: const EdgeInsets.only(bottom: 10),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: ListTile(
-                    leading: const CircleAvatar(
-                      backgroundColor: Color(0xFFEAF2FF),
-                      child: Icon(
-                        Icons.cleaning_services_outlined,
-                        color: AppTheme.primaryBlue,
-                      ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ListTile(
+                          leading: const CircleAvatar(
+                            backgroundColor: Color(0xFFEAF2FF),
+                            child: Icon(
+                              Icons.cleaning_services_outlined,
+                              color: AppTheme.primaryBlue,
+                            ),
+                          ),
+                          title: Text(
+                            item['nome_servico'] ??
+                                item['nome_categoria'] ??
+                                'Serviço',
+                          ),
+                          subtitle: Text(
+                            'Data: ${_formatarDataAgendamento(item['data_agendamento'])}'
+                            '${item['horario_agendamento'] == null ? '' : ' às ${item['horario_agendamento']}'}'
+                            '${item['nome_prestador'] == null ? '' : '\nPrestador: ${item['nome_prestador']}'}',
+                          ),
+                          trailing: _buildStatusBadge(status),
+                        ),
+                        if (status == 'CONCLUIDO' && !avaliada)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: () => _abrirAvaliacao(
+                                  Map<String, dynamic>.from(item),
+                                ),
+                                icon: const Icon(Icons.star_outline),
+                                label: const Text('Avaliar serviço'),
+                              ),
+                            ),
+                          ),
+                        if (status == 'CONCLUIDO' && avaliada) ...[
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+                            child: Row(
+                              children: [
+                                for (var estrela = 1; estrela <= 5; estrela++)
+                                  Icon(
+                                    estrela <= (nota ?? 0)
+                                        ? Icons.star
+                                        : Icons.star_border,
+                                    size: 18,
+                                    color: Colors.amber.shade700,
+                                  ),
+                                const SizedBox(width: 6),
+                                Text('${nota ?? 0}/5'),
+                              ],
+                            ),
+                          ),
+                          if (comentario.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                              child: Text(
+                                comentario,
+                                style: const TextStyle(
+                                  color: AppTheme.textSecondary,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ],
                     ),
-                    title: Text(item['nome_categoria'] ?? 'Serviço'),
-                    subtitle: Text(
-                      'Data: ${_formatarDataAgendamento(item['data_agendamento'])}'
-                      '${item['horario_agendamento'] == null ? '' : ' às ${item['horario_agendamento']}'}'
-                      '${item['nome_prestador'] == null ? '' : '\nPrestador: ${item['nome_prestador']}'}',
-                    ),
-                    trailing: _buildStatusBadge(item['status'] ?? 'ABERTO'),
                   ),
                 );
               },

@@ -91,6 +91,49 @@ class _PrestadorAgendaViewState extends State<PrestadorAgendaView> {
     if (sucesso) await _carregarAgenda();
   }
 
+  Future<void> _concluir(Map<String, dynamic> solicitacao) async {
+    final id = int.tryParse(solicitacao['id_solicitacao']?.toString() ?? '');
+    if (id == null) return;
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Finalizar atendimento?'),
+        content: const Text(
+          'O cliente poderá avaliar o serviço depois da conclusão.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Voltar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Concluir serviço'),
+          ),
+        ],
+      ),
+    );
+    if (confirmar != true) return;
+
+    setState(() => _respondendo.add(id));
+    final sucesso = await _solicitacaoService.concluirSolicitacao(id);
+    if (!mounted) return;
+
+    setState(() => _respondendo.remove(id));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          sucesso
+              ? 'Atendimento marcado como concluído.'
+              : 'Não foi possível concluir o atendimento.',
+        ),
+        backgroundColor: sucesso ? Colors.green : Colors.red,
+      ),
+    );
+    if (sucesso) await _carregarAgenda();
+  }
+
   String _formatarData(dynamic valor) {
     final data = DateTime.tryParse(valor?.toString() ?? '');
     if (data == null) return 'Data não informada';
@@ -204,7 +247,15 @@ class _PrestadorAgendaViewState extends State<PrestadorAgendaView> {
                     ),
                   ),
                 ),
-                Chip(label: Text(status), visualDensity: VisualDensity.compact),
+                Chip(
+                  label: Text(status),
+                  visualDensity: VisualDensity.compact,
+                  backgroundColor: status == 'CONCLUIDO'
+                      ? Colors.green.shade100
+                      : status == 'ACEITO' || status == 'EM_ANDAMENTO'
+                      ? Colors.blue.shade100
+                      : null,
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -255,6 +306,23 @@ class _PrestadorAgendaViewState extends State<PrestadorAgendaView> {
                     ),
                   ),
                 ],
+              ),
+            ],
+            if (status == 'ACEITO' || status == 'EM_ANDAMENTO') ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: respondendo ? null : () => _concluir(item),
+                  icon: respondendo
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.task_alt),
+                  label: const Text('Marcar como concluído'),
+                ),
               ),
             ],
           ],

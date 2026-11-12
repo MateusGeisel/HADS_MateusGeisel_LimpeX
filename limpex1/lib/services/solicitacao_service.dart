@@ -141,4 +141,44 @@ class SolicitacaoService {
       return false;
     }
   }
+
+  Future<bool> concluirSolicitacao(int idSolicitacao) async {
+    final token = await _authService.getToken();
+    if (token == null) return false;
+
+    try {
+      final response = await http.patch(
+        Uri.parse('$baseUrl/$idSolicitacao/concluir'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('Erro ao concluir solicitação: $e');
+      return false;
+    }
+  }
+
+  Future<bool> avaliarSolicitacao({
+    required int idSolicitacao,
+    required int nota,
+    String? comentario,
+  }) async {
+    final token = await _authService.getToken();
+    if (token == null) return false;
+
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/$idSolicitacao/avaliar'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'nota': nota, 'comentario': comentario}),
+      );
+      return response.statusCode == 201;
+    } catch (e) {
+      debugPrint('Erro ao avaliar solicitação: $e');
+      return false;
+    }
+  }
 }

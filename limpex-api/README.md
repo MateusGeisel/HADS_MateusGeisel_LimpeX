@@ -56,6 +56,11 @@ O banco de dados do LimpeX é composto pelas seguintes tabelas principais:
 - `GET /solicitacoes/disponiveis` — Prestador consulta pedidos pendentes compatíveis com sua agenda
 - `GET /solicitacoes/agenda` — Prestador consulta pedidos pendentes e atendimentos confirmados
 - `PATCH /solicitacoes/:id/aceitar` e `PATCH /solicitacoes/:id/recusar` — Responder a um pedido pendente
+- `PATCH /solicitacoes/:id/concluir` — Prestador vinculado conclui um atendimento aceito ou em andamento
+- `POST /solicitacoes/:id/avaliar` — Contratante registra uma avaliação de 1 a 5 após a conclusão
+- `GET /prestadores/:id/avaliacoes` — Consultar média, quantidade e avaliações públicas do prestador
+
+Antes de publicar a API, aplique [a migração de conclusão](./migrations/20261112_add_concluido_em.sql) no PostgreSQL. Ela adiciona `concluido_em` caso a coluna ainda não exista.
 
 ### 🩺 Saúde do Sistema
 - `GET /health` — Healthcheck da API e conexão em tempo real com o banco de dados PostgreSQL

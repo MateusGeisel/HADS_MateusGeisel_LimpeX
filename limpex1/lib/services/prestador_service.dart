@@ -382,6 +382,29 @@ class PrestadorService {
     return null;
   }
 
+  Future<Map<String, dynamic>?> buscarAvaliacoesPrestador(
+    int idPrestador,
+  ) async {
+    final token = await _authService.getToken();
+    final headers = <String, String>{'Content-Type': 'application/json'};
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/$idPrestador/avaliacoes'),
+        headers: headers,
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+    } catch (e) {
+      debugPrint('Erro ao buscar avaliações do prestador: $e');
+    }
+    return null;
+  }
+
   // Prestador cadastrar um novo serviço para exibir no seu perfil
   Future<bool> criarServico({
     required int idCategoria,

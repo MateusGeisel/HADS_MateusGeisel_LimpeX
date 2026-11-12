@@ -54,6 +54,9 @@ export class SolicitacaoRepository {
     const query = `
       SELECT
         s.*,
+        av.id_avaliacao IS NOT NULL AS avaliada,
+        av.nota AS avaliacao_nota,
+        av.comentario AS avaliacao_comentario,
         u.nome AS nome_cliente,
         up.nome AS nome_prestador,
         ser.nome AS nome_servico,
@@ -64,6 +67,9 @@ export class SolicitacaoRepository {
       JOIN usuario u ON s.id_contratante = u.id_usuario
       LEFT JOIN prestador p ON s.id_prestador = p.id_prestador
       LEFT JOIN usuario up ON p.id_usuario = up.id_usuario
+      LEFT JOIN avaliacao av
+        ON av.id_solicitacao = s.id_solicitacao
+       AND av.id_avaliador = s.id_contratante
       LEFT JOIN localizacao l ON u.id_localizacao = l.id_localizacao
       LEFT JOIN servico ser ON s.id_servico = ser.id_servico
       LEFT JOIN categoria_servico cat ON ser.id_categoria = cat.id_categoria
@@ -115,6 +121,7 @@ export class SolicitacaoRepository {
         s.id_prestador,
         s.status,
         s.data_agendamento,
+        s.concluido_em,
         s.observacoes AS descricao_detalhada,
         u.nome AS nome_cliente,
         ser.nome AS nome_servico,
@@ -127,7 +134,7 @@ export class SolicitacaoRepository {
       LEFT JOIN servico ser ON s.id_servico = ser.id_servico
       LEFT JOIN categoria_servico cat ON ser.id_categoria = cat.id_categoria
       WHERE (s.status = 'PENDENTE' AND (s.id_prestador IS NULL OR s.id_prestador = $1))
-         OR (s.id_prestador = $1 AND s.status IN ('ACEITO', 'EM_ANDAMENTO'))
+         OR (s.id_prestador = $1 AND s.status IN ('ACEITO', 'EM_ANDAMENTO', 'CONCLUIDO'))
       ORDER BY
         s.data_agendamento ASC,
         substring(
@@ -225,6 +232,19 @@ export class SolicitacaoRepository {
       RETURNING *;
     `;
     const result = await pool.query(query, [id_prestador, id_solicitacao]);
+    return result.rows[0];
+  }
+
+  static async concluirSolicitacao(id_solicitacao: number, id_prestador: number) {
+    const query = `
+      UPDATE solicitacao
+      SET status = 'CONCLUIDO', concluido_em = CURRENT_TIMESTAMP
+      WHERE id_solicitacao = $1
+        AND id_prestador = $2
+        AND status IN ('ACEITO', 'EM_ANDAMENTO')
+      RETURNING *;
+    `;
+    const result = await pool.query(query, [id_solicitacao, id_prestador]);
     return result.rows[0];
   }
 }

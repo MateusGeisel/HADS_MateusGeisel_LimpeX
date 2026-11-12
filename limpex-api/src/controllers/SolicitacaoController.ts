@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
+import { AvaliacaoRepository } from '../repositories/AvaliacaoRepository';
 import { PrestadorRepository } from '../repositories/PrestadorRepository';
 import { SolicitacaoRepository } from '../repositories/SolicitacaoRepository';
 
@@ -188,6 +189,92 @@ export class SolicitacaoController {
     } catch (error) {
       console.error('Erro ao recusar solicitação:', error);
       return res.status(500).json({ error: 'Erro interno ao recusar a solicitação.' });
+    }
+  }
+
+  static async concluirSolicitacao(req: AuthenticatedRequest, res: Response) {
+    try {
+      const id_usuario = req.userId;
+      const id_solicitacao = Number(req.params.id);
+      if (!id_usuario) {
+        return res.status(401).json({ error: 'Usuário não autenticado.' });
+      }
+      if (!Number.isInteger(id_solicitacao) || id_solicitacao <= 0) {
+        return res.status(400).json({ error: 'Solicitação inválida.' });
+      }
+
+      const prestador = await PrestadorRepository.buscarPorUsuario(id_usuario);
+      if (!prestador) {
+        return res.status(403).json({ error: 'Apenas prestadores podem concluir atendimentos.' });
+      }
+
+      const solicitacao = await SolicitacaoRepository.concluirSolicitacao(
+        id_solicitacao,
+        prestador.id_prestador,
+      );
+      if (!solicitacao) {
+        return res.status(409).json({
+          error: 'A solicitação não pertence a este prestador ou não está em andamento.',
+        });
+      }
+
+      return res.status(200).json({
+        message: 'Serviço concluído com sucesso.',
+        solicitacao,
+      });
+    } catch (error) {
+      console.error('Erro ao concluir solicitação:', error);
+      return res.status(500).json({ error: 'Erro interno ao concluir o serviço.' });
+    }
+  }
+
+  static async avaliarSolicitacao(req: AuthenticatedRequest, res: Response) {
+    try {
+      const id_avaliador = req.userId;
+      const id_solicitacao = Number(req.params.id);
+      const { nota, comentario } = req.body ?? {};
+
+      if (!id_avaliador) {
+        return res.status(401).json({ error: 'Usuário não autenticado.' });
+      }
+      if (!Number.isInteger(id_solicitacao) || id_solicitacao <= 0) {
+        return res.status(400).json({ error: 'Solicitação inválida.' });
+      }
+      if (typeof nota !== 'number' || !Number.isInteger(nota) || nota < 1 || nota > 5) {
+        return res.status(400).json({ error: 'A nota deve ser um número inteiro de 1 a 5.' });
+      }
+      if (comentario != null && (typeof comentario !== 'string' || comentario.length > 1000)) {
+        return res.status(400).json({ error: 'O comentário deve ter até 1000 caracteres.' });
+      }
+
+      const resultado = await AvaliacaoRepository.criar(
+        id_solicitacao,
+        id_avaliador,
+        nota,
+        typeof comentario === 'string' && comentario.trim()
+          ? comentario.trim()
+          : null,
+      );
+      switch (resultado.resultado) {
+        case 'NAO_ENCONTRADA':
+          return res.status(404).json({ error: 'Solicitação não encontrada.' });
+        case 'NAO_E_CONTRATANTE':
+          return res.status(403).json({ error: 'Apenas o contratante pode avaliar este serviço.' });
+        case 'NAO_CONCLUIDA':
+          return res.status(409).json({ error: 'O serviço ainda não foi concluído.' });
+        case 'JA_AVALIADA':
+          return res.status(409).json({ error: 'Esta solicitação já foi avaliada.' });
+        case 'PRESTADOR_NAO_ENCONTRADO':
+          return res.status(409).json({ error: 'A solicitação não possui prestador vinculado.' });
+        case 'CRIADA':
+          return res.status(201).json({
+            message: 'Avaliação registrada com sucesso.',
+            avaliacao: resultado.avaliacao,
+          });
+      }
+    } catch (error) {
+      console.error('Erro ao avaliar solicitação:', error);
+      return res.status(500).json({ error: 'Erro interno ao registrar avaliação.' });
     }
   }
 }

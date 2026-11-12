@@ -20,7 +20,9 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
   final PrestadorService _prestadorService = PrestadorService();
   final AuthService _authService = AuthService();
   Map<String, dynamic>? _perfilData;
+  List<dynamic> _avaliacoes = [];
   bool _carregando = true;
+  bool _erroAvaliacoes = false;
 
   @override
   void initState() {
@@ -29,15 +31,29 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
   }
 
   Future<void> _carregarPerfil() async {
-    final dados = await _prestadorService.buscarPerfilPrestador(
+    final perfilFuture = _prestadorService.buscarPerfilPrestador(
       widget.idPrestador,
     );
+    final avaliacoesFuture = _prestadorService.buscarAvaliacoesPrestador(
+      widget.idPrestador,
+    );
+    final dados = await perfilFuture;
+    final dadosAvaliacoes = await avaliacoesFuture;
     if (mounted) {
       setState(() {
         _perfilData = dados;
+        _erroAvaliacoes = dadosAvaliacoes == null;
+        _avaliacoes = dadosAvaliacoes?['avaliacoes'] as List<dynamic>? ?? [];
         _carregando = false;
       });
     }
+  }
+
+  String _formatarDataAvaliacao(dynamic valor) {
+    final data = DateTime.tryParse(valor?.toString() ?? '');
+    if (data == null) return '';
+    return '${data.day.toString().padLeft(2, '0')}/'
+        '${data.month.toString().padLeft(2, '0')}/${data.year}';
   }
 
   Future<void> _solicitarServico(Map<String, dynamic> servico) async {
@@ -120,6 +136,9 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
     final List<dynamic> servicos = _perfilData!['servicos'] ?? [];
     final bool isFormalizado = prestador['selo_formalizado'] == true;
     final bool agendaDisponivel = prestador['agenda_disponivel'] == true;
+    final totalAvaliacoes =
+        int.tryParse(prestador['total_avaliacoes']?.toString() ?? '0') ?? 0;
+    final mediaNota = prestador['media_nota']?.toString() ?? '0.0';
 
     return Scaffold(
       appBar: AppBar(title: Text(prestador['nome'] ?? 'Perfil do Prestador')),
@@ -181,14 +200,16 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
                       children: [
                         const Icon(Icons.star, color: Colors.amber, size: 18),
                         Text(
-                          ' ${prestador['media_nota'] ?? "5.0"} ',
+                          totalAvaliacoes == 0 ? ' Novo ' : ' $mediaNota ',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 15,
                           ),
                         ),
-                        const Text(
-                          '(Avaliações recentes)',
+                        Text(
+                          totalAvaliacoes == 0
+                              ? '(sem avaliações)'
+                              : '($totalAvaliacoes avaliações)',
                           style: TextStyle(
                             color: AppTheme.textSecondary,
                             fontSize: 13,
@@ -261,6 +282,98 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
                 ],
               ),
             ),
+            const SizedBox(height: 24),
+
+            const Text(
+              'Avaliações de clientes',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            if (_erroAvaliacoes)
+              const Text(
+                'Não foi possível carregar as avaliações.',
+                style: TextStyle(color: AppTheme.textSecondary),
+              )
+            else if (_avaliacoes.isEmpty)
+              const Text(
+                'Este profissional ainda não recebeu avaliações.',
+                style: TextStyle(color: AppTheme.textSecondary),
+              )
+            else
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _avaliacoes.length,
+                itemBuilder: (context, index) {
+                  final avaliacao = Map<String, dynamic>.from(
+                    _avaliacoes[index] as Map,
+                  );
+                  final nota =
+                      int.tryParse(avaliacao['nota']?.toString() ?? '') ?? 0;
+                  final comentario =
+                      avaliacao['comentario']?.toString().trim() ?? '';
+
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.person_outline,
+                                color: AppTheme.primaryBlue,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  avaliacao['nome_avaliador'] ?? 'Cliente',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              Text('$nota/5'),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              for (var estrela = 1; estrela <= 5; estrela++)
+                                Icon(
+                                  estrela <= nota
+                                      ? Icons.star
+                                      : Icons.star_border,
+                                  size: 18,
+                                  color: Colors.amber.shade700,
+                                ),
+                              if (_formatarDataAvaliacao(avaliacao['criado_em'])
+                                  .isNotEmpty) ...[
+                                const SizedBox(width: 8),
+                                Text(
+                                  _formatarDataAvaliacao(
+                                    avaliacao['criado_em'],
+                                  ),
+                                  style: const TextStyle(
+                                    color: AppTheme.textSecondary,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          if (comentario.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Text(comentario),
+                          ],
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
             const SizedBox(height: 24),
 
             const Text(

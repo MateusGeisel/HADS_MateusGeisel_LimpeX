@@ -20,6 +20,7 @@ prestadorRouter.patch('/agenda', authMiddleware, PrestadorController.atualizarAg
 // 3. Rotas da Vitrine (🟢 PÚBLICAS)
 // Removido o authMiddleware da listagem geral
 prestadorRouter.get('/', PrestadorController.listarTodos);
+prestadorRouter.get('/:id/avaliacoes', PrestadorController.listarAvaliacoes);
 
 // 4. Rotas dinâmicas por ID (🟢 PÚBLICAS para a Vitrine)
 // Removido o authMiddleware do perfil público

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
+import { AvaliacaoRepository } from '../repositories/AvaliacaoRepository';
 import { PrestadorRepository } from '../repositories/PrestadorRepository';
 import { ServicoRepository } from '../repositories/ServicoRepository';
 
@@ -97,6 +98,32 @@ static async buscarStatusAgenda(req: AuthenticatedRequest, res: Response): Promi
   } catch (error) {
     console.error('Erro ao buscar disponibilidade da agenda:', error);
     res.status(500).json({ error: 'Erro interno ao buscar a agenda.' });
+  }
+}
+
+static async listarAvaliacoes(req: Request, res: Response): Promise<void> {
+  try {
+    const idPrestador = Number(req.params.id);
+    if (!Number.isInteger(idPrestador) || idPrestador <= 0) {
+      res.status(400).json({ error: 'ID de prestador inválido.' });
+      return;
+    }
+
+    const prestador = await PrestadorRepository.buscarPorId(idPrestador);
+    if (!prestador) {
+      res.status(404).json({ error: 'Prestador não encontrado.' });
+      return;
+    }
+
+    const avaliacoes = await AvaliacaoRepository.listarPorPrestador(idPrestador);
+    res.status(200).json({
+      media_nota: prestador.media_nota,
+      total_avaliacoes: prestador.total_avaliacoes,
+      avaliacoes,
+    });
+  } catch (error) {
+    console.error('Erro ao listar avaliações do prestador:', error);
+    res.status(500).json({ error: 'Erro interno ao buscar avaliações.' });
   }
 }
 

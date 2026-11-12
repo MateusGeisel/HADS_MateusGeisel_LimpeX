@@ -10,5 +10,7 @@ solicitacaoRouter.get('/disponiveis', authMiddleware, SolicitacaoController.list
 solicitacaoRouter.get('/agenda', authMiddleware, SolicitacaoController.listarAgendaPrestador);
 solicitacaoRouter.patch('/:id/aceitar', authMiddleware, SolicitacaoController.aceitarSolicitacao);
 solicitacaoRouter.patch('/:id/recusar', authMiddleware, SolicitacaoController.recusarSolicitacao);
+solicitacaoRouter.patch('/:id/concluir', authMiddleware, SolicitacaoController.concluirSolicitacao);
+solicitacaoRouter.post('/:id/avaliar', authMiddleware, SolicitacaoController.avaliarSolicitacao);
 
 export default solicitacaoRouter;
