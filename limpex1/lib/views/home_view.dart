@@ -6,7 +6,7 @@ import '../services/solicitacao_service.dart';
 import '../services/prestador_service.dart';
 import '../main.dart';
 import 'login_view.dart';
-import 'add_address_view.dart';
+import 'register_view.dart';
 import 'criar_solicitacao_view.dart';
 import 'avaliar_servico_view.dart';
 import 'perfil_prestador_view.dart';
@@ -637,36 +637,53 @@ class _HomeViewState extends State<HomeView> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'LimpeX — ${_selectedNavIndex == 1
-              ? "Pesquisar Serviços"
-              : _selectedNavIndex == 2
-              ? widget.user == null
-                    ? "Contratar"
-                    : "Meu Perfil"
-              : "Início"}',
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Atualizar',
-            onPressed: _carregarDados,
-          ),
-          IconButton(
-            icon: Icon(widget.user != null ? Icons.logout : Icons.login),
-            tooltip: widget.user != null ? 'Sair' : 'Entrar',
-            onPressed: () {
-              if (widget.user != null) {
-                _fazerLogout(context);
-              } else {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const LoginView()),
-                );
-              }
-            },
-          ),
-        ],
+        backgroundColor: AppTheme.primaryBlue,
+        foregroundColor: Colors.white,
+        leading: _selectedNavIndex == 0
+            ? null
+            : IconButton(
+                tooltip: 'Voltar para o início',
+                onPressed: () => _selecionarNavegacao(0),
+                icon: const Icon(Icons.arrow_back),
+              ),
+        title: const Text('LimpeX'),
+        actions: widget.user == null
+            ? [
+                TextButton(
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                  onPressed: () => Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginView()),
+                  ),
+                  child: const Text('Entrar'),
+                ),
+                TextButton(
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const RegisterView()),
+                  ),
+                  child: const Text('Cadastrar'),
+                ),
+              ]
+            : [
+                IconButton(
+                  icon: const Icon(Icons.refresh),
+                  tooltip: 'Atualizar',
+                  onPressed: _carregarDados,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.logout),
+                  tooltip: 'Sair',
+                  onPressed: () => _fazerLogout(context),
+                ),
+              ],
       ),
       body: body,
       bottomNavigationBar: Theme(
@@ -725,119 +742,131 @@ class _HomeViewState extends State<HomeView> {
       children: [
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(22),
           decoration: BoxDecoration(
-            color: const Color(0xFFEAF2FF),
             borderRadius: BorderRadius.circular(24),
+            image: const DecorationImage(
+              image: NetworkImage(
+                'https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=1200&auto=format&fit=crop',
+              ),
+              fit: BoxFit.cover,
+            ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 7,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.verified_user_outlined,
-                      color: AppTheme.primaryBlue,
-                      size: 16,
-                    ),
-                    SizedBox(width: 6),
-                    Text(
-                      'Cuidado para sua casa',
-                      style: TextStyle(
-                        color: AppTheme.primaryBlue,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.black.withValues(alpha: 0.58),
+                  AppTheme.primaryBlue.withValues(alpha: 0.68),
+                  Colors.black.withValues(alpha: 0.78),
+                ],
               ),
-              const SizedBox(height: 18),
-              Text(
-                widget.user == null
-                    ? 'Sua casa em boas mãos.'
-                    : 'Olá, ${(_nomeAtualizado ?? widget.user!.nome).split(' ').first}!',
-                style: const TextStyle(
-                  color: AppTheme.textPrimary,
-                  fontSize: 27,
-                  height: 1.15,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Encontre profissionais de limpeza e escolha quem combina com você.',
-                style: TextStyle(
-                  color: AppTheme.textSecondary,
-                  fontSize: 15,
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 18),
-              TextField(
-                controller: _buscaController,
-                onChanged: (_) => setState(() {}),
-                onSubmitted: (_) {
-                  FocusManager.instance.primaryFocus?.unfocus();
-                  _selecionarNavegacao(1);
-                },
-                textInputAction: TextInputAction.search,
-                decoration: InputDecoration(
-                  hintText: 'Buscar serviço, profissional ou cidade',
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: _buscaController.text.isEmpty
-                      ? null
-                      : IconButton(
-                          tooltip: 'Limpar busca',
-                          onPressed: () {
-                            _buscaController.clear();
-                            setState(() {});
-                          },
-                          icon: const Icon(Icons.close),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(22),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 7,
                         ),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide.none,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.94),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.verified_user_outlined,
+                              color: AppTheme.primaryBlue,
+                              size: 16,
+                            ),
+                            SizedBox(width: 6),
+                            Text(
+                              'Cuidado para sua casa',
+                              style: TextStyle(
+                                color: AppTheme.primaryBlue,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Text(
+                        widget.user == null
+                            ? 'Sua casa em boas mãos.'
+                            : 'Olá, ${(_nomeAtualizado ?? widget.user!.nome).split(' ').first}!',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 27,
+                          height: 1.15,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Encontre profissionais de limpeza e escolha quem combina com você.',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.92),
+                          fontSize: 15,
+                          height: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      TextField(
+                        controller: _buscaController,
+                        onChanged: (_) => setState(() {}),
+                        onSubmitted: (_) {
+                          FocusManager.instance.primaryFocus?.unfocus();
+                          _selecionarNavegacao(1);
+                        },
+                        textInputAction: TextInputAction.search,
+                        decoration: InputDecoration(
+                          hintText: 'Buscar serviço, profissional ou cidade',
+                          prefixIcon: const Icon(Icons.search),
+                          suffixIcon: _buscaController.text.isEmpty
+                              ? null
+                              : IconButton(
+                                  tooltip: 'Limpar busca',
+                                  onPressed: () {
+                                    _buscaController.clear();
+                                    setState(() {});
+                                  },
+                                  icon: const Icon(Icons.close),
+                                ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 20),
-        ElevatedButton.icon(
-          onPressed: _abrirSolicitacao,
-          icon: const Icon(Icons.add_circle_outline),
-          label: Text(
-            widget.user == null
-                ? 'Entre para contratar um serviço'
-                : 'Solicitar um serviço',
-          ),
-        ),
         if (widget.user != null) ...[
-          const SizedBox(height: 10),
-          OutlinedButton.icon(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AddAddressView()),
-              );
-            },
-            icon: const Icon(Icons.location_on_outlined),
-            label: const Text('Cadastrar novo endereço'),
+          ElevatedButton.icon(
+            onPressed: _abrirSolicitacao,
+            icon: const Icon(Icons.add_circle_outline),
+            label: const Text('Solicitar um serviço'),
           ),
+          const SizedBox(height: 10),
         ],
         if (_servicosDisponiveis.isNotEmpty) ...[
           const SizedBox(height: 28),

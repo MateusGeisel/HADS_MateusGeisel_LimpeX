@@ -27,13 +27,13 @@ class _PrestadorNavigationShellState extends State<PrestadorNavigationShell> {
   int _selectedIndex = 0;
   bool _profileTabOpened = false;
 
-  static const _titles = ['Dashboard', 'Meus Serviços / Agenda', 'Meu Perfil'];
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('LimpeX — ${_titles[_selectedIndex]}'),
+        backgroundColor: AppTheme.primaryBlue,
+        foregroundColor: Colors.white,
+        title: const Text('LimpeX'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
