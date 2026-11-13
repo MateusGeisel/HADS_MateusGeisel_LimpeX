@@ -112,7 +112,78 @@ static async buscarStatusAgenda(req: AuthenticatedRequest, res: Response): Promi
   }
 }
 
-static async listarAvaliacoes(req: Request, res: Response): Promise<void> {
+  static async buscarMeuPerfil(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      if (!req.userId) {
+        res.status(401).json({ error: 'Usuário não autenticado.' });
+        return;
+      }
+
+      const perfil = await PrestadorRepository.buscarPerfilPorUsuario(req.userId);
+      if (!perfil) {
+        res.status(403).json({ error: 'Perfil de prestador não encontrado.' });
+        return;
+      }
+
+      res.status(200).json(perfil);
+    } catch (error) {
+      console.error('Erro ao buscar meu perfil de prestador:', error);
+      res.status(500).json({ error: 'Erro interno ao buscar perfil.' });
+    }
+  }
+
+  static async atualizarMeuPerfil(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      if (!req.userId) {
+        res.status(401).json({ error: 'Usuário não autenticado.' });
+        return;
+      }
+
+      const { nome, telefone, foto_perfil, biografia } = req.body;
+      if (typeof nome !== 'string' || !nome.trim()) {
+        res.status(400).json({ error: 'Informe um nome válido.' });
+        return;
+      }
+      if (typeof telefone !== 'string') {
+        res.status(400).json({ error: 'Informe um telefone válido.' });
+        return;
+      }
+      if (foto_perfil !== null && typeof foto_perfil !== 'string') {
+        res.status(400).json({ error: 'Informe uma foto de perfil válida.' });
+        return;
+      }
+      if (
+        biografia !== null &&
+        (typeof biografia !== 'string' || biografia.length > 2000)
+      ) {
+        res.status(400).json({ error: 'A biografia deve ter até 2000 caracteres.' });
+        return;
+      }
+
+      const perfil = await PrestadorRepository.atualizarPerfilPorUsuario(
+        req.userId,
+        {
+          nome: nome.trim(),
+          telefone: telefone.trim() || null,
+          foto_perfil:
+            typeof foto_perfil === 'string' ? foto_perfil.trim() || null : null,
+          biografia:
+            typeof biografia === 'string' ? biografia.trim() || null : null,
+        },
+      );
+      if (!perfil) {
+        res.status(403).json({ error: 'Perfil de prestador não encontrado.' });
+        return;
+      }
+
+      res.status(200).json(perfil);
+    } catch (error) {
+      console.error('Erro ao atualizar meu perfil de prestador:', error);
+      res.status(500).json({ error: 'Erro interno ao atualizar perfil.' });
+    }
+  }
+
+  static async listarAvaliacoes(req: Request, res: Response): Promise<void> {
   try {
     const idPrestador = Number(req.params.id);
     if (!Number.isInteger(idPrestador) || idPrestador <= 0) {

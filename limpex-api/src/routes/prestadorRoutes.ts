@@ -16,6 +16,8 @@ prestadorRouter.put('/servicos/:id', authMiddleware, PrestadorController.atualiz
 prestadorRouter.delete('/servicos/:id', authMiddleware, PrestadorController.excluirServico);
 prestadorRouter.get('/agenda', authMiddleware, PrestadorController.buscarStatusAgenda);
 prestadorRouter.patch('/agenda', authMiddleware, PrestadorController.atualizarAgenda);
+prestadorRouter.get('/me/perfil', authMiddleware, PrestadorController.buscarMeuPerfil);
+prestadorRouter.put('/me/perfil', authMiddleware, PrestadorController.atualizarMeuPerfil);
 
 // 3. Rotas da Vitrine (🟢 PÚBLICAS)
 // Removido o authMiddleware da listagem geral

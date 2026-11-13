@@ -7,8 +7,6 @@ import '../services/prestador_service.dart';
 import '../main.dart';
 import 'login_view.dart';
 import 'add_address_view.dart';
-import 'prestador_formalizacao_view.dart';
-import 'trilha_mei_view.dart';
 import 'criar_solicitacao_view.dart';
 import 'avaliar_servico_view.dart';
 import 'perfil_prestador_view.dart';
@@ -17,6 +15,8 @@ import 'meus_servicos_view.dart';
 import 'components/service_tags.dart';
 import 'search_services_view.dart';
 import 'client_profile_view.dart';
+import 'prestador_navigation_shell.dart';
+import 'prestador_profile_view.dart';
 
 class HomeView extends StatefulWidget {
   final UserModel? user; // 👈 Opcional para aceitar visitantes sem login
@@ -32,7 +32,6 @@ class _HomeViewState extends State<HomeView> {
   final PrestadorService _prestadorService = PrestadorService();
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _buscaController = TextEditingController();
-  final GlobalKey _servicosDisponiveisSectionKey = GlobalKey();
 
   List<dynamic> _solicitacoes = [];
   List<dynamic> _servicosDisponiveis = [];
@@ -97,13 +96,8 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
-  Future<void> _selecionarNavegacao(int index, bool isPrestador) async {
-    if (!isPrestador && index == 2 && widget.user != null) {
-      _profileTabOpened = true;
-    }
-    setState(() => _selectedNavIndex = index);
-
-    if (!isPrestador && widget.user == null && index == 2) {
+  Future<void> _selecionarNavegacao(int index) async {
+    if (index == 2 && widget.user == null) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const LoginView()),
@@ -111,48 +105,24 @@ class _HomeViewState extends State<HomeView> {
       return;
     }
 
-    if (isPrestador && index == 2) {
-      await Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const PrestadorAgendaView()),
-      );
-      if (mounted) setState(() => _selectedNavIndex = 0);
-      return;
+    if (index == 2) {
+      _profileTabOpened = true;
     }
+    setState(() => _selectedNavIndex = index);
 
-    if (!isPrestador && index == 1) {
+    if (index == 1 || index == 2) {
       FocusManager.instance.primaryFocus?.unfocus();
-      return;
-    }
-
-    if (!isPrestador && index == 2) {
-      FocusManager.instance.primaryFocus?.unfocus();
-      return;
-    }
-
-    if (index == 0) {
-      await WidgetsBinding.instance.endOfFrame;
-      if (!mounted) return;
-      if (!_scrollController.hasClients) return;
-      await _scrollController.animateTo(
-        0,
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeInOut,
-      );
       return;
     }
 
     await WidgetsBinding.instance.endOfFrame;
     if (!mounted) return;
-    final targetContext = _servicosDisponiveisSectionKey.currentContext;
-    if (targetContext != null && targetContext.mounted) {
-      await Scrollable.ensureVisible(
-        targetContext,
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeInOut,
-        alignment: 0.08,
-      );
-    }
+    if (!_scrollController.hasClients) return;
+    await _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeInOut,
+    );
   }
 
   Future<void> _abrirSolicitacao() async {
@@ -573,47 +543,56 @@ class _HomeViewState extends State<HomeView> {
         ),
       ),
     );
-    final Widget body = isPrestador
-        ? homeBody
-        : IndexedStack(
-            index: widget.user == null && _selectedNavIndex == 2
-                ? 0
-                : _selectedNavIndex,
-            children: [
-              homeBody,
-              SearchServicesView(
-                servicos: _servicosDisponiveis,
-                controller: _buscaController,
-                carregando: _carregando,
-                onRefresh: _carregarDados,
-              ),
-              if (widget.user case final user? when _profileTabOpened)
-                ClientProfileView(
-                  user: user,
-                  solicitacoes: _solicitacoes,
-                  carregandoSolicitacoes: _carregando,
-                  cancelandoSolicitacaoId: _cancelandoSolicitacaoId,
-                  onRefreshSolicitacoes: _carregarDados,
-                  podeCancelarSolicitacao: _podeCancelarSolicitacao,
-                  onCancelarSolicitacao: _confirmarCancelamento,
-                  onAvaliarSolicitacao: _abrirAvaliacao,
-                  onProfileUpdated: (profile) {
-                    setState(
-                      () => _nomeAtualizado = profile['nome']?.toString(),
-                    );
-                  },
-                )
-              else
-                const SizedBox.shrink(),
-            ],
-          );
+    if (isPrestador) {
+      return PrestadorNavigationShell(
+        dashboard: homeBody,
+        servicesAndAgenda: _buildPrestadorServicesAgendaTab(context),
+        profile: PrestadorProfileView(
+          user: widget.user!,
+          onProfileUpdated: (profile) {
+            setState(() => _nomeAtualizado = profile['nome']?.toString());
+          },
+        ),
+        onRefresh: _carregarDados,
+        onLogout: () => _fazerLogout(context),
+      );
+    }
+
+    final body = IndexedStack(
+      index: widget.user == null && _selectedNavIndex == 2
+          ? 0
+          : _selectedNavIndex,
+      children: [
+        homeBody,
+        SearchServicesView(
+          servicos: _servicosDisponiveis,
+          controller: _buscaController,
+          carregando: _carregando,
+          onRefresh: _carregarDados,
+        ),
+        if (widget.user case final user? when _profileTabOpened)
+          ClientProfileView(
+            user: user,
+            solicitacoes: _solicitacoes,
+            carregandoSolicitacoes: _carregando,
+            cancelandoSolicitacaoId: _cancelandoSolicitacaoId,
+            onRefreshSolicitacoes: _carregarDados,
+            podeCancelarSolicitacao: _podeCancelarSolicitacao,
+            onCancelarSolicitacao: _confirmarCancelamento,
+            onAvaliarSolicitacao: _abrirAvaliacao,
+            onProfileUpdated: (profile) {
+              setState(() => _nomeAtualizado = profile['nome']?.toString());
+            },
+          )
+        else
+          const SizedBox.shrink(),
+      ],
+    );
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'LimpeX — ${isPrestador
-              ? "Painel do Prestador"
-              : _selectedNavIndex == 1
+          'LimpeX — ${_selectedNavIndex == 1
               ? "Pesquisar Serviços"
               : _selectedNavIndex == 2
               ? widget.user == null
@@ -646,39 +625,15 @@ class _HomeViewState extends State<HomeView> {
       body: body,
       bottomNavigationBar: Theme(
         data: Theme.of(context).copyWith(
-          colorScheme: Theme.of(context).colorScheme.copyWith(
-            primary: isPrestador
-                ? AppTheme.prestadorAccent
-                : AppTheme.primaryBlue,
-          ),
+          colorScheme: Theme.of(context).colorScheme
+              .copyWith(primary: AppTheme.primaryBlue),
         ),
         child: NavigationBar(
           backgroundColor: Colors.white,
-          indicatorColor: isPrestador
-              ? AppTheme.secondaryYellow.withValues(alpha: 0.45)
-              : AppTheme.primaryBlue.withValues(alpha: 0.12),
+          indicatorColor: AppTheme.primaryBlue.withValues(alpha: 0.12),
           selectedIndex: _selectedNavIndex,
-          onDestinationSelected: (index) =>
-              _selecionarNavegacao(index, isPrestador),
-          destinations: isPrestador
-              ? const [
-                  NavigationDestination(
-                    icon: Icon(Icons.home_outlined),
-                    selectedIcon: Icon(Icons.home),
-                    label: 'Início',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.work_outline),
-                    selectedIcon: Icon(Icons.work),
-                    label: 'Disponíveis',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.calendar_month_outlined),
-                    selectedIcon: Icon(Icons.calendar_month),
-                    label: 'Agenda',
-                  ),
-                ]
-              : widget.user == null
+          onDestinationSelected: _selecionarNavegacao,
+          destinations: widget.user == null
               ? const [
                   NavigationDestination(
                     icon: Icon(Icons.home_outlined),
@@ -788,7 +743,7 @@ class _HomeViewState extends State<HomeView> {
                 onChanged: (_) => setState(() {}),
                 onSubmitted: (_) {
                   FocusManager.instance.primaryFocus?.unfocus();
-                  _selecionarNavegacao(1, false);
+                  _selecionarNavegacao(1);
                 },
                 textInputAction: TextInputAction.search,
                 decoration: InputDecoration(
@@ -874,7 +829,7 @@ class _HomeViewState extends State<HomeView> {
         ],
         const SizedBox(height: 12),
         OutlinedButton.icon(
-          onPressed: () => _selecionarNavegacao(1, false),
+          onPressed: () => _selecionarNavegacao(1),
           icon: const Icon(Icons.search),
           label: const Text('Pesquisar todos os serviços'),
         ),
@@ -1107,83 +1062,72 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
+  Widget _buildPrestadorServicesAgendaTab(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        const Text(
+          'Meus Serviços / Agenda',
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 6),
+        const Text(
+          'Acesse o cadastro dos serviços e acompanhe os atendimentos agendados.',
+          style: TextStyle(color: AppTheme.textSecondary),
+        ),
+        const SizedBox(height: 20),
+        Card(
+          child: ListTile(
+            leading: const CircleAvatar(
+              backgroundColor: Color(0xFFFFF5D6),
+              child: Icon(
+                Icons.cleaning_services_outlined,
+                color: AppTheme.prestadorAccent,
+              ),
+            ),
+            title: const Text(
+              'Gerenciar meus serviços',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: const Text('Cadastre, edite e atualize seus serviços.'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MeusServicosView()),
+            ),
+          ),
+        ),
+        Card(
+          child: ListTile(
+            leading: const CircleAvatar(
+              backgroundColor: Color(0xFFFFF5D6),
+              child: Icon(
+                Icons.calendar_month_outlined,
+                color: AppTheme.prestadorAccent,
+              ),
+            ),
+            title: const Text(
+              'Agenda de atendimentos',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: const Text('Responda e acompanhe suas solicitações.'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const PrestadorAgendaView()),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildPrestadorDashboard(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ElevatedButton.icon(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppTheme.secondaryYellow,
-            foregroundColor: AppTheme.textPrimary,
-          ),
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const MeusServicosView()),
-            );
-          },
-          icon: const Icon(Icons.cleaning_services_outlined),
-          label: const Text('Gerenciar Meus Serviços'),
-        ),
-        const SizedBox(height: 10),
-        OutlinedButton.icon(
-          style: OutlinedButton.styleFrom(
-            foregroundColor: AppTheme.prestadorAccent,
-            side: const BorderSide(color: AppTheme.secondaryYellow, width: 1.5),
-          ),
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const PrestadorAgendaView()),
-            );
-          },
-          icon: const Icon(Icons.calendar_month_outlined),
-          label: const Text('Abrir Agenda de Atendimentos'),
-        ),
-        const SizedBox(height: 10),
-
-        OutlinedButton.icon(
-          style: OutlinedButton.styleFrom(
-            foregroundColor: AppTheme.prestadorAccent,
-            side: const BorderSide(color: AppTheme.secondaryYellow, width: 1.5),
-          ),
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const PrestadorFormalizacaoView(),
-              ),
-            );
-          },
-          icon: const Icon(Icons.verified),
-          label: const Text('Cadastrar CNPJ / Formalização MEI'),
-        ),
-        const SizedBox(height: 10),
-
-        TextButton.icon(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const TrilhaMeiView()),
-            );
-          },
-          icon: const Icon(
-            Icons.school_outlined,
-            color: AppTheme.prestadorAccent,
-          ),
-          label: const Text(
-            'Conhecer Vantagens & Simulador MEI',
-            style: TextStyle(
-              color: AppTheme.prestadorAccent,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        const SizedBox(height: 24),
-
         Text(
           'Serviços Disponíveis na Região',
-          key: _servicosDisponiveisSectionKey,
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),

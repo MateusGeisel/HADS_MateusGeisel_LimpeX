@@ -1005,6 +1005,7 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
     final nome = prestador['nome']?.toString() ?? 'Prestador de serviços';
     final formalizado = prestador['selo_formalizado'] == true;
     final agendaDisponivel = prestador['agenda_disponivel'] == true;
+    final biografia = prestador['biografia']?.toString().trim() ?? '';
     final totalAvaliacoes =
         int.tryParse(prestador['total_avaliacoes']?.toString() ?? '0') ?? 0;
     final mediaNota = prestador['media_nota']?.toString() ?? '0.0';
@@ -1017,9 +1018,9 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
                 (servicos.first as Map)['imagens'],
           );
     final fotoPerfil = prestador['foto_perfil']?.toString();
-    final imagemHero = fotosServico.isNotEmpty
-        ? fotosServico.first
-        : (fotoPerfil != null && fotoPerfil.isNotEmpty ? fotoPerfil : null);
+    final imagemHero = fotoPerfil != null && fotoPerfil.trim().isNotEmpty
+        ? fotoPerfil
+        : (fotosServico.isNotEmpty ? fotosServico.first : null);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Perfil do profissional')),
@@ -1040,6 +1041,34 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
                     mediaNota: mediaNota,
                   ),
                   const SizedBox(height: 16),
+                  if (biografia.isNotEmpty) ...[
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(18),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Sobre o profissional',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              biografia,
+                              style: const TextStyle(
+                                color: AppTheme.textSecondary,
+                                height: 1.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                   _buildAvailability(agendaDisponivel),
                   const SizedBox(height: 30),
                   _buildServicesSection(

@@ -360,6 +360,69 @@ class PrestadorService {
     }
   }
 
+  Future<Map<String, dynamic>> buscarMeuPerfil() async {
+    final token = await _authService.getToken();
+    if (token == null || token.isEmpty) {
+      throw StateError('Entre novamente para acessar seu perfil.');
+    }
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/me/perfil'),
+      headers: _headersAutenticados(token),
+    );
+    dynamic dados;
+    try {
+      dados = jsonDecode(response.body);
+    } on FormatException {
+      throw const FormatException('Resposta inválida ao carregar o perfil.');
+    }
+    if (response.statusCode != 200 || dados is! Map) {
+      throw StateError(
+        dados is Map && dados['error'] is String
+            ? dados['error'] as String
+            : 'Não foi possível carregar o perfil do prestador.',
+      );
+    }
+    return Map<String, dynamic>.from(dados);
+  }
+
+  Future<Map<String, dynamic>> atualizarMeuPerfil({
+    required String nome,
+    required String telefone,
+    required String biografia,
+    String? fotoPerfil,
+  }) async {
+    final token = await _authService.getToken();
+    if (token == null || token.isEmpty) {
+      throw StateError('Entre novamente para salvar seu perfil.');
+    }
+
+    final response = await http.put(
+      Uri.parse('$baseUrl/me/perfil'),
+      headers: _headersAutenticados(token, json: true),
+      body: jsonEncode({
+        'nome': nome,
+        'telefone': telefone,
+        'biografia': biografia,
+        'foto_perfil': fotoPerfil,
+      }),
+    );
+    dynamic dados;
+    try {
+      dados = jsonDecode(response.body);
+    } on FormatException {
+      throw const FormatException('Resposta inválida ao salvar o perfil.');
+    }
+    if (response.statusCode != 200 || dados is! Map) {
+      throw StateError(
+        dados is Map && dados['error'] is String
+            ? dados['error'] as String
+            : 'Não foi possível salvar o perfil do prestador.',
+      );
+    }
+    return Map<String, dynamic>.from(dados);
+  }
+
   // 🟢 PÚBLICO: Buscar perfil detalhado do prestador e a lista dos seus serviços ofertados
   Future<Map<String, dynamic>?> buscarPerfilPrestador(int idPrestador) async {
     final token = await _authService.getToken();
