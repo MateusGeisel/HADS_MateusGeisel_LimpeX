@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../main.dart';
 import '../services/prestador_service.dart';
+import 'components/service_tags.dart';
 
 class ServicoDetalheView extends StatefulWidget {
   final Map<String, dynamic> servico;
@@ -122,7 +123,9 @@ class _ServicoDetalheViewState extends State<ServicoDetalheView> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
+                ServiceTags(tags: ServiceTags.fromService(servico)),
+                const SizedBox(height: 8),
                 Text(
                   'Oferecido por ${widget.nomePrestador}',
                   style: const TextStyle(color: AppTheme.textSecondary),

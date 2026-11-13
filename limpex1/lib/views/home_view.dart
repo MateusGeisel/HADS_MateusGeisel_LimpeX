@@ -14,6 +14,7 @@ import 'avaliar_servico_view.dart';
 import 'perfil_prestador_view.dart';
 import 'prestador_agenda_view.dart';
 import 'meus_servicos_view.dart';
+import 'components/service_tags.dart';
 
 class HomeView extends StatefulWidget {
   final UserModel? user; // 👈 Opcional para aceitar visitantes sem login
@@ -1220,15 +1221,7 @@ class _HomeViewState extends State<HomeView> {
                       ),
                     ),
                     const SizedBox(height: 5),
-                    Text(
-                      (item['nome_categoria'] ?? 'Serviço').toString(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppTheme.textSecondary,
-                        fontSize: 10,
-                      ),
-                    ),
+                    ServiceTags(tags: ServiceTags.fromService(item)),
                     if ((item['descricao_servico'] ?? '')
                         .toString()
                         .trim()

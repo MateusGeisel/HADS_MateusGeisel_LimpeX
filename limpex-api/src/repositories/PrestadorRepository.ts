@@ -56,6 +56,7 @@ export class PrestadorRepository {
         s.descricao AS descricao_servico,
         s.valor,
         s.tipo_cobranca,
+        s.modalidade,
         s.fotos AS fotos_servicos,
         c.nome AS nome_categoria,
         u.telefone,

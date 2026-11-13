@@ -6,6 +6,7 @@ import '../services/prestador_service.dart';
 import 'criar_solicitacao_view.dart';
 import 'login_view.dart';
 import 'servico_detalhe_view.dart';
+import 'components/service_tags.dart';
 
 class PerfilPrestadorView extends StatefulWidget {
   final int idPrestador;
@@ -443,8 +444,7 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
     );
     final nome = servico['nome']?.toString() ?? 'Serviço profissional';
     final descricao = servico['descricao']?.toString().trim() ?? '';
-    final categoria = servico['nome_categoria']?.toString().trim() ?? '';
-    final modalidade = servico['modalidade']?.toString().trim() ?? '';
+    final tags = ServiceTags.fromService(servico);
 
     return Card(
       margin: EdgeInsets.zero,
@@ -492,21 +492,8 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    if (categoria.isNotEmpty)
-                      _buildBadge(categoria, AppTheme.primaryBlue),
-                    if (modalidade.isNotEmpty)
-                      _buildBadge(
-                        modalidade.replaceAll('_', ' ').toLowerCase(),
-                        AppTheme.prestadorAccent,
-                      ),
-                  ],
-                ),
-                if (categoria.isNotEmpty || modalidade.isNotEmpty)
-                  const SizedBox(height: 10),
+                ServiceTags(tags: tags),
+                if (tags.isNotEmpty) const SizedBox(height: 10),
                 Text(
                   nome,
                   maxLines: 2,
@@ -599,21 +586,6 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildBadge(String texto, Color cor) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: cor.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: cor.withValues(alpha: 0.16)),
-      ),
-      child: Text(
-        texto,
-        style: TextStyle(color: cor, fontSize: 11, fontWeight: FontWeight.w700),
       ),
     );
   }
