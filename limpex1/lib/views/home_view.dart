@@ -40,6 +40,7 @@ class _HomeViewState extends State<HomeView> {
   int _selectedNavIndex = 0;
   bool _profileTabOpened = false;
   String? _nomeAtualizado;
+  String? _fotoPerfilPrestador;
 
   @override
   void dispose() {
@@ -60,6 +61,7 @@ class _HomeViewState extends State<HomeView> {
     final isPrestador = widget.user?.tipoPerfil == 'PRESTADOR';
 
     if (isPrestador) {
+      final fotoFuture = _carregarFotoPerfil();
       final lista = await _solicitacaoService.buscarSolicitacoesDisponiveis();
       if (mounted) {
         setState(() {
@@ -67,6 +69,7 @@ class _HomeViewState extends State<HomeView> {
           _carregando = false;
         });
       }
+      await fotoFuture;
     } else {
       // Se não houver usuário logado (visitante), busca apenas o catálogo público.
       final listaSolicitacoes = widget.user != null
@@ -81,6 +84,19 @@ class _HomeViewState extends State<HomeView> {
           _carregando = false;
         });
       }
+    }
+  }
+
+  Future<void> _carregarFotoPerfil() async {
+    try {
+      final perfil = await _prestadorService.buscarMeuPerfil();
+      if (!mounted) return;
+      final foto = perfil['foto_perfil']?.toString().trim();
+      setState(() {
+        _fotoPerfilPrestador = foto == null || foto.isEmpty ? null : foto;
+      });
+    } catch (error) {
+      debugPrint('Erro ao carregar foto do perfil do prestador: $error');
     }
   }
 
@@ -486,13 +502,39 @@ class _HomeViewState extends State<HomeView> {
                 ),
                 child: Row(
                   children: [
-                    const CircleAvatar(
-                      radius: 30,
-                      backgroundColor: Colors.white,
-                      child: Icon(
-                        Icons.cleaning_services,
-                        color: AppTheme.prestadorAccent,
-                        size: 32,
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white,
+                        border: Border.all(color: Colors.white, width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.12),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: ClipOval(
+                        child: _fotoPerfilPrestador == null
+                            ? const Icon(
+                                Icons.cleaning_services,
+                                color: AppTheme.prestadorAccent,
+                                size: 32,
+                              )
+                            : Image.network(
+                                _fotoPerfilPrestador!,
+                                width: 60,
+                                height: 60,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, _, _) => const Icon(
+                                  Icons.person_outline,
+                                  color: AppTheme.prestadorAccent,
+                                  size: 32,
+                                ),
+                              ),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -550,7 +592,11 @@ class _HomeViewState extends State<HomeView> {
         profile: PrestadorProfileView(
           user: widget.user!,
           onProfileUpdated: (profile) {
-            setState(() => _nomeAtualizado = profile['nome']?.toString());
+            final foto = profile['foto_perfil']?.toString().trim();
+            setState(() {
+              _nomeAtualizado = profile['nome']?.toString();
+              _fotoPerfilPrestador = foto == null || foto.isEmpty ? null : foto;
+            });
           },
         ),
         onRefresh: _carregarDados,
