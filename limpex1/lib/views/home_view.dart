@@ -29,12 +29,12 @@ class _HomeViewState extends State<HomeView> {
   final PrestadorService _prestadorService = PrestadorService();
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _buscaController = TextEditingController();
-  final GlobalKey _prestadoresSectionKey = GlobalKey();
+  final GlobalKey _pesquisaSectionKey = GlobalKey();
   final GlobalKey _solicitacoesSectionKey = GlobalKey();
   final GlobalKey _servicosDisponiveisSectionKey = GlobalKey();
 
   List<dynamic> _solicitacoes = [];
-  List<dynamic> _prestadoresDestaque = [];
+  List<dynamic> _servicosDisponiveis = [];
   bool _carregando = false;
   int? _cancelandoSolicitacaoId;
   int _selectedNavIndex = 0;
@@ -66,16 +66,16 @@ class _HomeViewState extends State<HomeView> {
         });
       }
     } else {
-      // Se não houver usuário logado (visitante), busca apenas a lista pública de prestadores
+      // Se não houver usuário logado (visitante), busca apenas o catálogo público.
       final listaSolicitacoes = widget.user != null
           ? await _solicitacaoService.buscarMinhasSolicitacoes()
           : [];
-      final listaPrestadores = await _prestadorService.listarPrestadores();
+      final listaServicos = await _prestadorService.listarServicosDisponiveis();
 
       if (mounted) {
         setState(() {
           _solicitacoes = listaSolicitacoes;
-          _prestadoresDestaque = listaPrestadores;
+          _servicosDisponiveis = listaServicos;
           _carregando = false;
         });
       }
@@ -126,7 +126,7 @@ class _HomeViewState extends State<HomeView> {
     final key = isPrestador
         ? _servicosDisponiveisSectionKey
         : index == 1
-        ? _prestadoresSectionKey
+        ? _pesquisaSectionKey
         : _solicitacoesSectionKey;
     final targetContext = key.currentContext;
     if (targetContext != null) {
@@ -626,9 +626,9 @@ class _HomeViewState extends State<HomeView> {
                     label: 'Início',
                   ),
                   NavigationDestination(
-                    icon: Icon(Icons.people_outline),
-                    selectedIcon: Icon(Icons.people),
-                    label: 'Profissionais',
+                    icon: Icon(Icons.search),
+                    selectedIcon: Icon(Icons.search),
+                    label: 'Pesquisar',
                   ),
                   NavigationDestination(
                     icon: Icon(Icons.work_outline),
@@ -643,9 +643,9 @@ class _HomeViewState extends State<HomeView> {
                     label: 'Início',
                   ),
                   NavigationDestination(
-                    icon: Icon(Icons.people_outline),
-                    selectedIcon: Icon(Icons.people),
-                    label: 'Profissionais',
+                    icon: Icon(Icons.search),
+                    selectedIcon: Icon(Icons.search),
+                    label: 'Pesquisar',
                   ),
                   NavigationDestination(
                     icon: Icon(Icons.receipt_long_outlined),
@@ -660,11 +660,19 @@ class _HomeViewState extends State<HomeView> {
 
   Widget _buildClienteDashboard(BuildContext context) {
     final termoBusca = _buscaController.text.trim().toLowerCase();
-    final prestadoresFiltrados = _prestadoresDestaque.where((item) {
+    final servicosFiltrados = _servicosDisponiveis.where((item) {
       final nome = (item['nome'] ?? '').toString().toLowerCase();
+      final nomeServico = (item['nome_servico'] ?? '').toString().toLowerCase();
+      final categoria = (item['nome_categoria'] ?? '').toString().toLowerCase();
+      final descricao = (item['descricao_servico'] ?? '')
+          .toString()
+          .toLowerCase();
       final cidade = (item['cidade'] ?? '').toString().toLowerCase();
       final bairro = (item['bairro'] ?? '').toString().toLowerCase();
-      return nome.contains(termoBusca) ||
+      return nomeServico.contains(termoBusca) ||
+          categoria.contains(termoBusca) ||
+          descricao.contains(termoBusca) ||
+          nome.contains(termoBusca) ||
           cidade.contains(termoBusca) ||
           bairro.contains(termoBusca);
     }).toList();
@@ -734,11 +742,12 @@ class _HomeViewState extends State<HomeView> {
               ),
               const SizedBox(height: 18),
               TextField(
+                key: _pesquisaSectionKey,
                 controller: _buscaController,
                 onChanged: (_) => setState(() {}),
                 textInputAction: TextInputAction.search,
                 decoration: InputDecoration(
-                  hintText: 'Buscar por profissional ou cidade',
+                  hintText: 'Buscar serviço, profissional ou cidade',
                   prefixIcon: const Icon(Icons.search),
                   suffixIcon: _buscaController.text.isEmpty
                       ? null
@@ -787,16 +796,15 @@ class _HomeViewState extends State<HomeView> {
         const SizedBox(height: 28),
 
         Row(
-          key: _prestadoresSectionKey,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text(
-              'Profissionais disponíveis',
+              'Serviços disponíveis',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            if (_prestadoresDestaque.length > 4)
+            if (servicosFiltrados.isNotEmpty)
               Text(
-                '${_prestadoresDestaque.length} encontrados',
+                '${servicosFiltrados.length} ${servicosFiltrados.length == 1 ? 'serviço encontrado' : 'serviços encontrados'}',
                 style: const TextStyle(
                   color: AppTheme.textSecondary,
                   fontSize: 12,
@@ -806,7 +814,7 @@ class _HomeViewState extends State<HomeView> {
         ),
         const SizedBox(height: 4),
         const Text(
-          'Conheça os perfis e os serviços oferecidos.',
+          'Escolha um serviço e conheça o perfil de quem oferece.',
           style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
         ),
         const SizedBox(height: 12),
@@ -817,7 +825,7 @@ class _HomeViewState extends State<HomeView> {
               child: CircularProgressIndicator(),
             ),
           )
-        else if (prestadoresFiltrados.isEmpty)
+        else if (servicosFiltrados.isEmpty)
           Card(
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(18),
@@ -835,8 +843,8 @@ class _HomeViewState extends State<HomeView> {
                   Expanded(
                     child: Text(
                       _buscaController.text.isEmpty
-                          ? 'Ainda não há profissionais disponíveis. Tente novamente mais tarde.'
-                          : 'Nenhum profissional encontrado para essa busca.',
+                          ? 'Ainda não há serviços disponíveis. Tente novamente mais tarde.'
+                          : 'Nenhum serviço encontrado para essa busca.',
                       style: const TextStyle(color: AppTheme.textSecondary),
                     ),
                   ),
@@ -856,8 +864,11 @@ class _HomeViewState extends State<HomeView> {
                 spacing: spacing,
                 runSpacing: spacing,
                 children: [
-                  for (final item in prestadoresFiltrados)
-                    _buildPrestadorCard(item, cardWidth),
+                  for (final item in servicosFiltrados)
+                    _buildServicoCard(
+                      Map<String, dynamic>.from(item),
+                      cardWidth,
+                    ),
                 ],
               );
             },
@@ -1057,8 +1068,9 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
-  Widget _buildPrestadorCard(Map<String, dynamic> item, double width) {
+  Widget _buildServicoCard(Map<String, dynamic> item, double width) {
     final nome = (item['nome'] ?? 'Profissional').toString();
+    final nomeServico = (item['nome_servico'] ?? 'Serviço').toString();
     final fotosServicos = PrestadorService.extrairFotos(
       item['fotos_servicos'] ?? item['fotos'] ?? item['foto_servico'],
     );
@@ -1074,6 +1086,11 @@ class _HomeViewState extends State<HomeView> {
         int.tryParse(item['total_avaliacoes']?.toString() ?? '0') ?? 0;
     final idPrestador = int.tryParse(item['id_prestador']?.toString() ?? '');
     final temSelo = item['selo_formalizado'] == true;
+    final tipoCobranca = switch (item['tipo_cobranca']?.toString()) {
+      'TURNO' => 'por turno',
+      'FIXO' => 'por serviço',
+      _ => 'por hora',
+    };
 
     return SizedBox(
       width: width,
@@ -1169,12 +1186,12 @@ class _HomeViewState extends State<HomeView> {
                       children: [
                         Expanded(
                           child: Text(
-                            nome,
+                            nomeServico,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                              fontSize: 15,
                             ),
                           ),
                         ),
@@ -1193,18 +1210,67 @@ class _HomeViewState extends State<HomeView> {
                     ),
                     const SizedBox(height: 5),
                     Text(
-                      localizacao.isEmpty ? 'Atende sua região' : localizacao,
+                      'Prestador: $nome',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: AppTheme.textSecondary,
-                        fontSize: 11,
+                        color: AppTheme.primaryBlue,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                     const SizedBox(height: 5),
                     Text(
+                      (item['nome_categoria'] ?? 'Serviço').toString(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 10,
+                      ),
+                    ),
+                    if ((item['descricao_servico'] ?? '')
+                        .toString()
+                        .trim()
+                        .isNotEmpty) ...[
+                      const SizedBox(height: 5),
+                      Text(
+                        item['descricao_servico'].toString(),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 5),
+                    Text(
+                      'R\$ ${item['valor'] ?? '—'} $tipoCobranca',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.green.shade800,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (localizacao.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        localizacao,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 4),
+                    Text(
                       totalAvaliacoes == 0
-                          ? 'Conheça o perfil e os serviços'
+                          ? 'Ainda sem avaliações'
                           : '$totalAvaliacoes avaliações',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

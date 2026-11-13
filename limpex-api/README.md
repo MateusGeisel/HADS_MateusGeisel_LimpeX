@@ -49,6 +49,7 @@ O banco de dados do LimpeX é composto pelas seguintes tabelas principais:
 - `POST /prestador/dados-fiscais` — Gravação/atualização de dados fiscais (CPF/CNPJ e optante MEI)
 - `POST /prestador/trilha-mei` — Registro de progresso na trilha guiada e simulador financeiro MEI
 - `GET /prestadores/agenda` e `PATCH /prestadores/agenda` — Consultar e alterar a disponibilidade da agenda do prestador
+- `GET /prestadores/servicos` — Lista cada serviço ativo individualmente, vinculado ao perfil do prestador
 
 ### 📅 Solicitações e agendamentos (`/solicitacoes`)
 - `POST /solicitacoes` — Cliente solicita um serviço informando data, horário e observações

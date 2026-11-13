@@ -40,6 +40,50 @@ export class PrestadorRepository {
     return result.rows;
   }
 
+  static async listarServicosDisponiveis() {
+    const query = `
+      SELECT
+        p.id_prestador,
+        p.agenda_disponivel,
+        p.selo_formalizado,
+        p.optante_mei,
+        p.status_validacao,
+        u.id_usuario,
+        u.nome,
+        u.foto_perfil,
+        s.id_servico,
+        s.nome AS nome_servico,
+        s.descricao AS descricao_servico,
+        s.valor,
+        s.tipo_cobranca,
+        s.fotos AS fotos_servicos,
+        c.nome AS nome_categoria,
+        u.telefone,
+        l.cidade,
+        l.bairro,
+        COALESCE(a.media_nota, 0.0)::NUMERIC(2,1) AS media_nota,
+        COALESCE(a.total_avaliacoes, 0)::INTEGER AS total_avaliacoes
+      FROM servico s
+      JOIN prestador p ON s.id_prestador = p.id_prestador
+      JOIN usuario u ON p.id_usuario = u.id_usuario
+      LEFT JOIN categoria_servico c ON s.id_categoria = c.id_categoria
+      LEFT JOIN localizacao l ON u.id_localizacao = l.id_localizacao
+      LEFT JOIN (
+        SELECT
+          id_avaliado,
+          AVG(nota) AS media_nota,
+          COUNT(*) AS total_avaliacoes
+        FROM avaliacao
+        GROUP BY id_avaliado
+      ) a ON a.id_avaliado = u.id_usuario
+      WHERE s.ativo = TRUE
+        AND u.status_conta = 'ATIVO'
+      ORDER BY p.selo_formalizado DESC, media_nota DESC, s.id_servico DESC;
+    `;
+    const result = await pool.query(query);
+    return result.rows;
+  }
+
   // Buscar detalhes do perfil de um prestador pelo ID
   static async buscarPorId(id_prestador: number) {
     const query = `

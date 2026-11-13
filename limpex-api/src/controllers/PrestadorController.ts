@@ -30,6 +30,17 @@ export class PrestadorController {
       res.status(500).json({ error: 'Erro interno ao buscar prestadores.' });
     }
   }
+
+  static async listarServicosDisponiveis(req: Request, res: Response): Promise<void> {
+    try {
+      const servicos = await PrestadorRepository.listarServicosDisponiveis();
+      res.status(200).json(servicos);
+    } catch (error) {
+      console.error('Erro ao listar serviços disponíveis:', error);
+      res.status(500).json({ error: 'Erro interno ao buscar serviços disponíveis.' });
+    }
+  }
+
   // Listar serviços de um prestador específico (para o próprio prestador)
   static async listarMeusServicos(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {

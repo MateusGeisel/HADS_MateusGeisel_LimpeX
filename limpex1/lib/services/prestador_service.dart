@@ -146,8 +146,8 @@ class PrestadorService {
   // NOVAS FUNCIONALIDADES (VITRINE & SERVIÇOS)
   // ==========================================
 
-  // 🟢 PÚBLICO: Listar todos os prestadores para a Vitrine/Catálogo do Contratante
-  Future<List<dynamic>> listarPrestadores() async {
+  // Público: lista os serviços individuais exibidos na vitrine do cliente.
+  Future<List<dynamic>> listarServicosDisponiveis() async {
     final token = await _authService.getToken();
 
     final Map<String, String> headers = {'Content-Type': 'application/json'};
@@ -157,13 +157,16 @@ class PrestadorService {
     }
 
     try {
-      final response = await http.get(Uri.parse(baseUrl), headers: headers);
+      final response = await http.get(
+        Uri.parse('$baseUrl/servicos'),
+        headers: headers,
+      );
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       }
     } catch (e) {
-      print('Erro ao listar prestadores: $e');
+      debugPrint('Erro ao listar serviços disponíveis: $e');
     }
     return [];
   }
