@@ -9,6 +9,10 @@ export interface SolicitacaoDTO {
   status?: string;
 }
 
+export type CancelamentoSolicitacaoResultado =
+  | { resultado: 'CANCELADA'; solicitacao: Record<string, unknown> }
+  | { resultado: 'NAO_ENCONTRADA' | 'STATUS_INVALIDO' | 'PRAZO_EXPIRADO' };
+
 export class SolicitacaoRepository {
   private static incluirHorario(rows: Array<Record<string, unknown>>) {
     return rows.map((row) => {
@@ -134,7 +138,7 @@ export class SolicitacaoRepository {
       LEFT JOIN servico ser ON s.id_servico = ser.id_servico
       LEFT JOIN categoria_servico cat ON ser.id_categoria = cat.id_categoria
       WHERE (s.status = 'PENDENTE' AND (s.id_prestador IS NULL OR s.id_prestador = $1))
-         OR (s.id_prestador = $1 AND s.status IN ('ACEITO', 'EM_ANDAMENTO', 'CONCLUIDO'))
+         OR (s.id_prestador = $1 AND s.status IN ('ACEITO', 'EM_ANDAMENTO', 'CONCLUIDO', 'CANCELADO'))
       ORDER BY
         s.data_agendamento ASC,
         substring(
@@ -246,5 +250,64 @@ export class SolicitacaoRepository {
     `;
     const result = await pool.query(query, [id_solicitacao, id_prestador]);
     return result.rows[0];
+  }
+
+  static async cancelarSolicitacao(
+    id_solicitacao: number,
+    id_contratante: number,
+  ): Promise<CancelamentoSolicitacaoResultado> {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const solicitacao = await client.query(
+        `SELECT
+           s.status,
+           (
+             s.data_agendamento + COALESCE(
+               substring(
+                 COALESCE(s.observacoes, '')
+                 FROM 'Horário [^:]+: ([0-9]{2}:[0-9]{2})'
+               )::time,
+               TIME '00:00'
+             )
+           ) < (clock_timestamp() AT TIME ZONE 'America/Sao_Paulo')
+             + INTERVAL '24 hours' AS prazo_expirado
+         FROM solicitacao s
+         WHERE s.id_solicitacao = $1
+           AND s.id_contratante = $2
+         FOR UPDATE;`,
+        [id_solicitacao, id_contratante],
+      );
+
+      if (!solicitacao.rows[0]) {
+        await client.query('ROLLBACK');
+        return { resultado: 'NAO_ENCONTRADA' };
+      }
+      if (!['PENDENTE', 'ACEITO'].includes(solicitacao.rows[0].status)) {
+        await client.query('ROLLBACK');
+        return { resultado: 'STATUS_INVALIDO' };
+      }
+      if (solicitacao.rows[0].prazo_expirado) {
+        await client.query('ROLLBACK');
+        return { resultado: 'PRAZO_EXPIRADO' };
+      }
+
+      const cancelada = await client.query(
+        `UPDATE solicitacao
+         SET status = 'CANCELADO'
+         WHERE id_solicitacao = $1
+           AND id_contratante = $2
+           AND status IN ('PENDENTE', 'ACEITO')
+         RETURNING *;`,
+        [id_solicitacao, id_contratante],
+      );
+      await client.query('COMMIT');
+      return { resultado: 'CANCELADA', solicitacao: cancelada.rows[0] };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 }

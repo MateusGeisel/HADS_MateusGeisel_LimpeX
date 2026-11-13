@@ -54,9 +54,10 @@ O banco de dados do LimpeX é composto pelas seguintes tabelas principais:
 - `POST /solicitacoes` — Cliente solicita um serviço informando data, horário e observações
 - `GET /solicitacoes/minhas` — Consultar solicitações do cliente e seus status
 - `GET /solicitacoes/disponiveis` — Prestador consulta pedidos pendentes compatíveis com sua agenda
-- `GET /solicitacoes/agenda` — Prestador consulta pedidos pendentes e atendimentos confirmados
+- `GET /solicitacoes/agenda` — Prestador consulta pedidos pendentes, atendimentos confirmados e cancelados
 - `PATCH /solicitacoes/:id/aceitar` e `PATCH /solicitacoes/:id/recusar` — Responder a um pedido pendente
 - `PATCH /solicitacoes/:id/concluir` — Prestador vinculado conclui um atendimento aceito ou em andamento
+- `PATCH /solicitacoes/:id/cancelar` — Contratante cancela uma solicitação com pelo menos 24 horas de antecedência
 - `POST /solicitacoes/:id/avaliar` — Contratante registra uma avaliação de 1 a 5 após a conclusão
 - `GET /prestadores/:id/avaliacoes` — Consultar média, quantidade e avaliações públicas do prestador
 

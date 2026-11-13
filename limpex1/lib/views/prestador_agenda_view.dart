@@ -254,6 +254,8 @@ class _PrestadorAgendaViewState extends State<PrestadorAgendaView> {
                       ? Colors.green.shade100
                       : status == 'ACEITO' || status == 'EM_ANDAMENTO'
                       ? Colors.blue.shade100
+                      : status == 'CANCELADO'
+                      ? Colors.grey.shade300
                       : null,
                 ),
               ],

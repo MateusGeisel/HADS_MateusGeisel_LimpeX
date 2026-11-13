@@ -36,6 +36,7 @@ class _HomeViewState extends State<HomeView> {
   List<dynamic> _solicitacoes = [];
   List<dynamic> _prestadoresDestaque = [];
   bool _carregando = false;
+  int? _cancelandoSolicitacaoId;
   int _selectedNavIndex = 0;
 
   @override
@@ -176,6 +177,76 @@ class _HomeViewState extends State<HomeView> {
         const SnackBar(content: Text('Avaliação registrada. Obrigado!')),
       );
     }
+  }
+
+  DateTime? _dataHoraAgendamento(Map<String, dynamic> item) {
+    final data = DateTime.tryParse(item['data_agendamento']?.toString() ?? '');
+    if (data == null) return null;
+
+    final horario = RegExp(r'^(\d{2}):(\d{2})$')
+        .firstMatch(item['horario_agendamento']?.toString() ?? '');
+    final hora = int.tryParse(horario?.group(1) ?? '0') ?? 0;
+    final minuto = int.tryParse(horario?.group(2) ?? '0') ?? 0;
+    if (hora > 23 || minuto > 59) return null;
+
+    return DateTime(data.year, data.month, data.day, hora, minuto);
+  }
+
+  bool _podeCancelarSolicitacao(Map<String, dynamic> item) {
+    final status = item['status']?.toString();
+    if (status != 'PENDENTE' && status != 'ACEITO') return false;
+    final agendamento = _dataHoraAgendamento(item);
+    return agendamento != null &&
+        agendamento.difference(DateTime.now()) >= const Duration(hours: 24);
+  }
+
+  Future<void> _confirmarCancelamento(Map<String, dynamic> item) async {
+    final id = int.tryParse(item['id_solicitacao']?.toString() ?? '');
+    if (id == null || !_podeCancelarSolicitacao(item)) return;
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancelar solicitação'),
+        content: const Text(
+          'Deseja cancelar esta solicitação de serviço? Essa ação não poderá ser desfeita.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Voltar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Confirmar cancelamento'),
+          ),
+        ],
+      ),
+    );
+    if (confirmar != true || !mounted) return;
+
+    setState(() => _cancelandoSolicitacaoId = id);
+    String? erro;
+    try {
+      await _solicitacaoService.cancelarSolicitacao(id);
+    } catch (error) {
+      erro = error is StateError
+          ? error.message.toString()
+          : 'Não foi possível cancelar a solicitação. Tente novamente.';
+    }
+    if (!mounted) return;
+    setState(() => _cancelandoSolicitacaoId = null);
+
+    if (erro == null) {
+      await _carregarDados();
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(erro ?? 'Solicitação cancelada com sucesso.'),
+        backgroundColor: erro == null ? Colors.green : Colors.red,
+      ),
+    );
   }
 
   void _mostrarDetalhesSolicitacao(Map<String, dynamic> item) {
@@ -372,6 +443,9 @@ class _HomeViewState extends State<HomeView> {
     } else if (status == 'RECUSADO') {
       bg = Colors.red.shade50;
       text = Colors.red.shade800;
+    } else if (status == 'CANCELADO') {
+      bg = Colors.grey.shade200;
+      text = Colors.grey.shade800;
     }
 
     return Container(
@@ -837,6 +911,12 @@ class _HomeViewState extends State<HomeView> {
                 );
                 final comentario =
                     item['avaliacao_comentario']?.toString().trim() ?? '';
+                final podeCancelar = _podeCancelarSolicitacao(
+                  Map<String, dynamic>.from(item),
+                );
+                final prazoCancelamentoExpirado =
+                    (status == 'PENDENTE' || status == 'ACEITO') &&
+                    !podeCancelar;
                 return Card(
                   margin: const EdgeInsets.only(bottom: 10),
                   shape: RoundedRectangleBorder(
@@ -909,6 +989,62 @@ class _HomeViewState extends State<HomeView> {
                                 ),
                               ),
                             ),
+                        ],
+                        if (status == 'PENDENTE' || status == 'ACEITO') ...[
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    onPressed:
+                                        podeCancelar &&
+                                            _cancelandoSolicitacaoId !=
+                                                int.tryParse(
+                                                  item['id_solicitacao']
+                                                          ?.toString() ??
+                                                      '',
+                                                )
+                                        ? () => _confirmarCancelamento(
+                                            Map<String, dynamic>.from(item),
+                                          )
+                                        : null,
+                                    icon:
+                                        _cancelandoSolicitacaoId ==
+                                            int.tryParse(
+                                              item['id_solicitacao']
+                                                      ?.toString() ??
+                                                  '',
+                                            )
+                                        ? const SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        : const Icon(Icons.cancel_outlined),
+                                    label: const Text('Cancelar solicitação'),
+                                  ),
+                                ),
+                                if (prazoCancelamentoExpirado)
+                                  Text(
+                                    _dataHoraAgendamento(
+                                              Map<String, dynamic>.from(item),
+                                            ) ==
+                                            null
+                                        ? 'Não foi possível verificar o prazo de cancelamento.'
+                                        : 'Prazo de cancelamento expirado. É necessário cancelar com pelo menos 24 horas de antecedência.',
+                                    style: TextStyle(
+                                      color: Colors.red.shade700,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
                         ],
                       ],
                     ),

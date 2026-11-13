@@ -228,6 +228,44 @@ export class SolicitacaoController {
     }
   }
 
+  static async cancelarSolicitacao(req: AuthenticatedRequest, res: Response) {
+    try {
+      const id_contratante = req.userId;
+      const id_solicitacao = Number(req.params.id);
+      if (!id_contratante) {
+        return res.status(401).json({ error: 'Usuário não autenticado.' });
+      }
+      if (!Number.isInteger(id_solicitacao) || id_solicitacao <= 0) {
+        return res.status(400).json({ error: 'Solicitação inválida.' });
+      }
+
+      const resultado = await SolicitacaoRepository.cancelarSolicitacao(
+        id_solicitacao,
+        id_contratante,
+      );
+      switch (resultado.resultado) {
+        case 'NAO_ENCONTRADA':
+          return res.status(404).json({ error: 'Solicitação não encontrada.' });
+        case 'STATUS_INVALIDO':
+          return res.status(409).json({
+            error: 'Esta solicitação não pode mais ser cancelada.',
+          });
+        case 'PRAZO_EXPIRADO':
+          return res.status(409).json({
+            error: 'O prazo para cancelamento expirou. É necessário cancelar com pelo menos 24 horas de antecedência.',
+          });
+        case 'CANCELADA':
+          return res.status(200).json({
+            message: 'Solicitação cancelada com sucesso.',
+            solicitacao: resultado.solicitacao,
+          });
+      }
+    } catch (error) {
+      console.error('Erro ao cancelar solicitação:', error);
+      return res.status(500).json({ error: 'Erro interno ao cancelar a solicitação.' });
+    }
+  }
+
   static async avaliarSolicitacao(req: AuthenticatedRequest, res: Response) {
     try {
       const id_avaliador = req.userId;

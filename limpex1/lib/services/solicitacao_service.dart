@@ -158,6 +158,30 @@ class SolicitacaoService {
     }
   }
 
+  Future<void> cancelarSolicitacao(int idSolicitacao) async {
+    final token = await _authService.getToken();
+    if (token == null) {
+      throw StateError('Entre novamente para cancelar a solicitação.');
+    }
+
+    final response = await http.patch(
+      Uri.parse('$baseUrl/$idSolicitacao/cancelar'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode == 200) return;
+
+    var mensagem = 'Não foi possível cancelar a solicitação.';
+    try {
+      final dados = jsonDecode(response.body);
+      if (dados is Map && dados['error'] is String) {
+        mensagem = dados['error'] as String;
+      }
+    } on FormatException {
+      debugPrint('Resposta inválida ao cancelar a solicitação.');
+    }
+    throw StateError(mensagem);
+  }
+
   Future<bool> avaliarSolicitacao({
     required int idSolicitacao,
     required int nota,
