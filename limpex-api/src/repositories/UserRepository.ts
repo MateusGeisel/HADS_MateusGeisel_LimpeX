@@ -1,6 +1,35 @@
 import { pool } from '../config/database';
 
 export class UserRepository {
+  static async findProfileById(id_usuario: number) {
+    const query = `
+      SELECT id_usuario, nome, email, telefone, foto_perfil
+      FROM usuario
+      WHERE id_usuario = $1 AND status_conta = 'ATIVO';
+    `;
+    const result = await pool.query(query, [id_usuario]);
+    return result.rows[0];
+  }
+
+  static async updateProfile(
+    id_usuario: number,
+    data: { nome: string; telefone: string | null; foto_perfil: string | null },
+  ) {
+    const query = `
+      UPDATE usuario
+      SET nome = $1, telefone = $2, foto_perfil = $3
+      WHERE id_usuario = $4 AND status_conta = 'ATIVO'
+      RETURNING id_usuario, nome, email, telefone, foto_perfil;
+    `;
+    const result = await pool.query(query, [
+      data.nome,
+      data.telefone,
+      data.foto_perfil,
+      id_usuario,
+    ]);
+    return result.rows[0];
+  }
+
   static async findByEmail(email: string) {
     const query = `
       SELECT u.*, p.nome as perfil_nome 

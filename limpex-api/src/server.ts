@@ -7,6 +7,7 @@ import addressRouter from './routes/addressRoutes';
 import prestadorRouter from './routes/prestadorRoutes';
 import solicitacaoRouter from './routes/solicitacaoRoutes';
 import uploadRouter from './routes/uploadRoutes';
+import usuarioRouter from './routes/usuarioRoutes';
 
 dotenv.config();
 
@@ -29,6 +30,7 @@ app.use('/address', addressRouter);
 app.use('/prestadores', prestadorRouter);
 app.use('/solicitacoes', solicitacaoRouter);
 app.use('/upload', uploadRouter);
+app.use('/usuarios', usuarioRouter);
 
 // Rota de Teste (Healthcheck)
 app.get('/health', async (req, res) => {

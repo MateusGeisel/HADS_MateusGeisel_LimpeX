@@ -318,6 +318,7 @@ class _SearchServiceCardState extends State<_SearchServiceCard> {
     );
     final nome = servico['nome_servico']?.toString() ?? 'Serviço';
     final nomePrestador = servico['nome']?.toString() ?? 'Profissional';
+    final fotoPerfil = servico['foto_perfil']?.toString().trim();
     final idPrestador = int.tryParse(servico['id_prestador']?.toString() ?? '');
     final nota = double.tryParse(servico['media_nota']?.toString() ?? '') ?? 0;
     final totalAvaliacoes =
@@ -405,12 +406,44 @@ class _SearchServiceCardState extends State<_SearchServiceCard> {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Text(
-                    'Oferecido por $nomePrestador',
-                    style: const TextStyle(
-                      color: AppTheme.primaryBlue,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 18,
+                        backgroundColor: AppTheme.primaryBlue.withValues(
+                          alpha: 0.09,
+                        ),
+                        child: ClipOval(
+                          child: fotoPerfil == null || fotoPerfil.isEmpty
+                              ? const Icon(
+                                  Icons.person_outline,
+                                  color: AppTheme.primaryBlue,
+                                )
+                              : Image.network(
+                                  fotoPerfil,
+                                  width: 36,
+                                  height: 36,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, _, _) => const Icon(
+                                    Icons.person_outline,
+                                    color: AppTheme.primaryBlue,
+                                  ),
+                                ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Oferecido por $nomePrestador',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppTheme.primaryBlue,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   if ((servico['descricao_servico'] ?? '')
                       .toString()

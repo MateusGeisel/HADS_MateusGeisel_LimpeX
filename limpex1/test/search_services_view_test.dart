@@ -103,21 +103,63 @@ void main() {
     await tester.pump();
 
     expect(find.byType(PageView), findsOneWidget);
+    final carouselStack = find
+        .ancestor(of: find.byType(PageView), matching: find.byType(Stack))
+        .first;
+    final indicadorFinder = find.descendant(
+      of: carouselStack,
+      matching: find.byType(AnimatedContainer),
+    );
     final indicadores = tester
-        .widgetList<AnimatedContainer>(find.byType(AnimatedContainer))
+        .widgetList<AnimatedContainer>(indicadorFinder)
         .toList();
     expect(indicadores, hasLength(2));
-    expect(tester.getSize(find.byType(AnimatedContainer).first).width, 22);
-    expect(tester.getSize(find.byType(AnimatedContainer).last).width, 14);
+    expect(tester.getSize(indicadorFinder.first).width, 22);
+    expect(tester.getSize(indicadorFinder.last).width, 14);
 
     await tester.fling(find.byType(PageView), const Offset(-500, 0), 1000);
     await tester.pumpAndSettle();
 
     final indicadoresAtualizados = tester.widgetList<AnimatedContainer>(
-      find.byType(AnimatedContainer),
+      indicadorFinder,
     );
     expect(indicadoresAtualizados, hasLength(2));
-    expect(tester.getSize(find.byType(AnimatedContainer).first).width, 14);
-    expect(tester.getSize(find.byType(AnimatedContainer).last).width, 22);
+    expect(tester.getSize(indicadorFinder.first).width, 14);
+    expect(tester.getSize(indicadorFinder.last).width, 22);
+  });
+
+  testWidgets('exibe foto de perfil e nome do prestador no card', (
+    tester,
+  ) async {
+    const fotoPerfil = 'https://example.com/perfil-ana.jpg';
+    final controller = TextEditingController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SearchServicesView(
+            servicos: [
+              {...servicos.first, 'foto_perfil': fotoPerfil},
+            ],
+            controller: controller,
+            carregando: false,
+            onRefresh: () async {},
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Oferecido por Ana'), findsOneWidget);
+    final imagemPerfil = tester.widget<Image>(
+      find.descendant(
+        of: find.byType(CircleAvatar),
+        matching: find.byType(Image),
+      ),
+    );
+    expect(
+      imagemPerfil.image,
+      isA<NetworkImage>().having((image) => image.url, 'url', fotoPerfil),
+    );
   });
 }

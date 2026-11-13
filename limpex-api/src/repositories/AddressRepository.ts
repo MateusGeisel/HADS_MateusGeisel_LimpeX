@@ -41,4 +41,32 @@ export class AddressRepository {
     const result = await pool.query(query, [id_usuario]);
     return result.rows;
   }
+
+  static async update(
+    id_endereco: number,
+    id_usuario: number,
+    address: Omit<AddressDTO, 'id_endereco' | 'id_usuario'>,
+  ): Promise<AddressDTO | undefined> {
+    const query = `
+      UPDATE endereco
+      SET cep = $1, rua = $2, numero = $3, bairro = $4,
+          cidade = $5, estado = $6, latitude = $7, longitude = $8
+      WHERE id_endereco = $9 AND id_usuario = $10
+      RETURNING *;
+    `;
+    const values = [
+      address.cep,
+      address.rua,
+      address.numero,
+      address.bairro,
+      address.cidade,
+      address.estado,
+      address.latitude ?? null,
+      address.longitude ?? null,
+      id_endereco,
+      id_usuario,
+    ];
+    const result = await pool.query(query, values);
+    return result.rows[0];
+  }
 }

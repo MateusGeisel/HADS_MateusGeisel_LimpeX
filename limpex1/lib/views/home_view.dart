@@ -16,6 +16,7 @@ import 'prestador_agenda_view.dart';
 import 'meus_servicos_view.dart';
 import 'components/service_tags.dart';
 import 'search_services_view.dart';
+import 'client_profile_view.dart';
 
 class HomeView extends StatefulWidget {
   final UserModel? user; // 👈 Opcional para aceitar visitantes sem login
@@ -31,7 +32,6 @@ class _HomeViewState extends State<HomeView> {
   final PrestadorService _prestadorService = PrestadorService();
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _buscaController = TextEditingController();
-  final GlobalKey _solicitacoesSectionKey = GlobalKey();
   final GlobalKey _servicosDisponiveisSectionKey = GlobalKey();
 
   List<dynamic> _solicitacoes = [];
@@ -39,6 +39,8 @@ class _HomeViewState extends State<HomeView> {
   bool _carregando = false;
   int? _cancelandoSolicitacaoId;
   int _selectedNavIndex = 0;
+  bool _profileTabOpened = false;
+  String? _nomeAtualizado;
 
   @override
   void dispose() {
@@ -96,6 +98,9 @@ class _HomeViewState extends State<HomeView> {
   }
 
   Future<void> _selecionarNavegacao(int index, bool isPrestador) async {
+    if (!isPrestador && index == 2 && widget.user != null) {
+      _profileTabOpened = true;
+    }
     setState(() => _selectedNavIndex = index);
 
     if (!isPrestador && widget.user == null && index == 2) {
@@ -120,6 +125,11 @@ class _HomeViewState extends State<HomeView> {
       return;
     }
 
+    if (!isPrestador && index == 2) {
+      FocusManager.instance.primaryFocus?.unfocus();
+      return;
+    }
+
     if (index == 0) {
       await WidgetsBinding.instance.endOfFrame;
       if (!mounted) return;
@@ -134,10 +144,7 @@ class _HomeViewState extends State<HomeView> {
 
     await WidgetsBinding.instance.endOfFrame;
     if (!mounted) return;
-    final key = isPrestador
-        ? _servicosDisponiveisSectionKey
-        : _solicitacoesSectionKey;
-    final targetContext = key.currentContext;
+    final targetContext = _servicosDisponiveisSectionKey.currentContext;
     if (targetContext != null && targetContext.mounted) {
       await Scrollable.ensureVisible(
         targetContext,
@@ -477,7 +484,8 @@ class _HomeViewState extends State<HomeView> {
   @override
   Widget build(BuildContext context) {
     final bool isPrestador = widget.user?.tipoPerfil == 'PRESTADOR';
-    final String nomeExibicao = widget.user?.nome ?? 'Visitante';
+    final String nomeExibicao =
+        _nomeAtualizado ?? widget.user?.nome ?? 'Visitante';
     final Widget homeBody = RefreshIndicator(
       onRefresh: _carregarDados,
       child: SingleChildScrollView(
@@ -568,7 +576,9 @@ class _HomeViewState extends State<HomeView> {
     final Widget body = isPrestador
         ? homeBody
         : IndexedStack(
-            index: _selectedNavIndex == 1 ? 1 : 0,
+            index: widget.user == null && _selectedNavIndex == 2
+                ? 0
+                : _selectedNavIndex,
             children: [
               homeBody,
               SearchServicesView(
@@ -577,6 +587,24 @@ class _HomeViewState extends State<HomeView> {
                 carregando: _carregando,
                 onRefresh: _carregarDados,
               ),
+              if (widget.user case final user? when _profileTabOpened)
+                ClientProfileView(
+                  user: user,
+                  solicitacoes: _solicitacoes,
+                  carregandoSolicitacoes: _carregando,
+                  cancelandoSolicitacaoId: _cancelandoSolicitacaoId,
+                  onRefreshSolicitacoes: _carregarDados,
+                  podeCancelarSolicitacao: _podeCancelarSolicitacao,
+                  onCancelarSolicitacao: _confirmarCancelamento,
+                  onAvaliarSolicitacao: _abrirAvaliacao,
+                  onProfileUpdated: (profile) {
+                    setState(
+                      () => _nomeAtualizado = profile['nome']?.toString(),
+                    );
+                  },
+                )
+              else
+                const SizedBox.shrink(),
             ],
           );
 
@@ -588,7 +616,9 @@ class _HomeViewState extends State<HomeView> {
               : _selectedNavIndex == 1
               ? "Pesquisar Serviços"
               : _selectedNavIndex == 2
-              ? "Minhas Solicitações"
+              ? widget.user == null
+                    ? "Contratar"
+                    : "Meu Perfil"
               : "Início"}',
         ),
         actions: [
@@ -678,9 +708,9 @@ class _HomeViewState extends State<HomeView> {
                     label: 'Pesquisar',
                   ),
                   NavigationDestination(
-                    icon: Icon(Icons.receipt_long_outlined),
-                    selectedIcon: Icon(Icons.receipt_long),
-                    label: 'Solicitações',
+                    icon: Icon(Icons.person_outline),
+                    selectedIcon: Icon(Icons.person),
+                    label: 'Meu Perfil',
                   ),
                 ],
         ),
@@ -735,7 +765,7 @@ class _HomeViewState extends State<HomeView> {
               Text(
                 widget.user == null
                     ? 'Sua casa em boas mãos.'
-                    : 'Olá, ${widget.user!.nome.split(' ').first}!',
+                    : 'Olá, ${(_nomeAtualizado ?? widget.user!.nome).split(' ').first}!',
                 style: const TextStyle(
                   color: AppTheme.textPrimary,
                   fontSize: 27,
@@ -848,197 +878,6 @@ class _HomeViewState extends State<HomeView> {
           icon: const Icon(Icons.search),
           label: const Text('Pesquisar todos os serviços'),
         ),
-        if (widget.user != null) ...[
-          const SizedBox(height: 28),
-          Text(
-            'Minhas Solicitações',
-            key: _solicitacoesSectionKey,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          if (_solicitacoes.isEmpty)
-            Card(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.history,
-                      color: AppTheme.primaryBlue,
-                      size: 30,
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Text(
-                        _carregando
-                            ? 'Carregando suas solicitações...'
-                            : 'Você ainda não fez solicitações.',
-                        style: const TextStyle(color: AppTheme.textSecondary),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            )
-          else
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _solicitacoes.length,
-              itemBuilder: (context, index) {
-                final item = _solicitacoes[index];
-                final status = item['status']?.toString() ?? 'PENDENTE';
-                final avaliada = item['avaliada'] == true;
-                final nota = int.tryParse(
-                  item['avaliacao_nota']?.toString() ?? '',
-                );
-                final comentario =
-                    item['avaliacao_comentario']?.toString().trim() ?? '';
-                final podeCancelar = _podeCancelarSolicitacao(
-                  Map<String, dynamic>.from(item),
-                );
-                final prazoCancelamentoExpirado =
-                    (status == 'PENDENTE' || status == 'ACEITO') &&
-                    !podeCancelar;
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ListTile(
-                          leading: const CircleAvatar(
-                            backgroundColor: Color(0xFFEAF2FF),
-                            child: Icon(
-                              Icons.cleaning_services_outlined,
-                              color: AppTheme.primaryBlue,
-                            ),
-                          ),
-                          title: Text(
-                            item['nome_servico'] ??
-                                item['nome_categoria'] ??
-                                'Serviço',
-                          ),
-                          subtitle: Text(
-                            'Data: ${_formatarDataAgendamento(item['data_agendamento'])}'
-                            '${item['horario_agendamento'] == null ? '' : ' às ${item['horario_agendamento']}'}'
-                            '${item['nome_prestador'] == null ? '' : '\nPrestador: ${item['nome_prestador']}'}',
-                          ),
-                          trailing: _buildStatusBadge(status),
-                        ),
-                        if (status == 'CONCLUIDO' && !avaliada)
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                            child: SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton.icon(
-                                onPressed: () => _abrirAvaliacao(
-                                  Map<String, dynamic>.from(item),
-                                ),
-                                icon: const Icon(Icons.star_outline),
-                                label: const Text('Avaliar serviço'),
-                              ),
-                            ),
-                          ),
-                        if (status == 'CONCLUIDO' && avaliada) ...[
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-                            child: Row(
-                              children: [
-                                for (var estrela = 1; estrela <= 5; estrela++)
-                                  Icon(
-                                    estrela <= (nota ?? 0)
-                                        ? Icons.star
-                                        : Icons.star_border,
-                                    size: 18,
-                                    color: Colors.amber.shade700,
-                                  ),
-                                const SizedBox(width: 6),
-                                Text('${nota ?? 0}/5'),
-                              ],
-                            ),
-                          ),
-                          if (comentario.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                              child: Text(
-                                comentario,
-                                style: const TextStyle(
-                                  color: AppTheme.textSecondary,
-                                ),
-                              ),
-                            ),
-                        ],
-                        if (status == 'PENDENTE' || status == 'ACEITO') ...[
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: OutlinedButton.icon(
-                                    onPressed:
-                                        podeCancelar &&
-                                            _cancelandoSolicitacaoId !=
-                                                int.tryParse(
-                                                  item['id_solicitacao']
-                                                          ?.toString() ??
-                                                      '',
-                                                )
-                                        ? () => _confirmarCancelamento(
-                                            Map<String, dynamic>.from(item),
-                                          )
-                                        : null,
-                                    icon:
-                                        _cancelandoSolicitacaoId ==
-                                            int.tryParse(
-                                              item['id_solicitacao']
-                                                      ?.toString() ??
-                                                  '',
-                                            )
-                                        ? const SizedBox(
-                                            width: 18,
-                                            height: 18,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                            ),
-                                          )
-                                        : const Icon(Icons.cancel_outlined),
-                                    label: const Text('Cancelar solicitação'),
-                                  ),
-                                ),
-                                if (prazoCancelamentoExpirado)
-                                  Text(
-                                    _dataHoraAgendamento(
-                                              Map<String, dynamic>.from(item),
-                                            ) ==
-                                            null
-                                        ? 'Não foi possível verificar o prazo de cancelamento.'
-                                        : 'Prazo de cancelamento expirado. É necessário cancelar com pelo menos 24 horas de antecedência.',
-                                    style: TextStyle(
-                                      color: Colors.red.shade700,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-        ],
       ],
     );
   }

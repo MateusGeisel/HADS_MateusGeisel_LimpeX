@@ -6,5 +6,6 @@ const addressRouter = Router();
 
 addressRouter.post('/', authMiddleware, AddressController.createAddress);
 addressRouter.get('/', authMiddleware, AddressController.getUserAddresses);
+addressRouter.put('/:id', authMiddleware, AddressController.updateAddress);
 
 export default addressRouter;
