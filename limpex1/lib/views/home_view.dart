@@ -15,6 +15,7 @@ import 'perfil_prestador_view.dart';
 import 'prestador_agenda_view.dart';
 import 'meus_servicos_view.dart';
 import 'components/service_tags.dart';
+import 'search_services_view.dart';
 
 class HomeView extends StatefulWidget {
   final UserModel? user; // 👈 Opcional para aceitar visitantes sem login
@@ -30,7 +31,6 @@ class _HomeViewState extends State<HomeView> {
   final PrestadorService _prestadorService = PrestadorService();
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _buscaController = TextEditingController();
-  final GlobalKey _pesquisaSectionKey = GlobalKey();
   final GlobalKey _solicitacoesSectionKey = GlobalKey();
   final GlobalKey _servicosDisponiveisSectionKey = GlobalKey();
 
@@ -115,7 +115,15 @@ class _HomeViewState extends State<HomeView> {
       return;
     }
 
+    if (!isPrestador && index == 1) {
+      FocusManager.instance.primaryFocus?.unfocus();
+      return;
+    }
+
     if (index == 0) {
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted) return;
+      if (!_scrollController.hasClients) return;
       await _scrollController.animateTo(
         0,
         duration: const Duration(milliseconds: 350),
@@ -124,13 +132,13 @@ class _HomeViewState extends State<HomeView> {
       return;
     }
 
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
     final key = isPrestador
         ? _servicosDisponiveisSectionKey
-        : index == 1
-        ? _pesquisaSectionKey
         : _solicitacoesSectionKey;
     final targetContext = key.currentContext;
-    if (targetContext != null) {
+    if (targetContext != null && targetContext.mounted) {
       await Scrollable.ensureVisible(
         targetContext,
         duration: const Duration(milliseconds: 350),
@@ -470,11 +478,118 @@ class _HomeViewState extends State<HomeView> {
   Widget build(BuildContext context) {
     final bool isPrestador = widget.user?.tipoPerfil == 'PRESTADOR';
     final String nomeExibicao = widget.user?.nome ?? 'Visitante';
+    final Widget homeBody = RefreshIndicator(
+      onRefresh: _carregarDados,
+      child: SingleChildScrollView(
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (isPrestador) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppTheme.secondaryYellow, Color(0xFFFFE082)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.secondaryYellow.withValues(alpha: 0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    const CircleAvatar(
+                      radius: 30,
+                      backgroundColor: Colors.white,
+                      child: Icon(
+                        Icons.cleaning_services,
+                        color: AppTheme.prestadorAccent,
+                        size: 32,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  'Olá, $nomeExibicao!',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              const Icon(
+                                Icons.verified,
+                                color: AppTheme.prestadorAccent,
+                                size: 20,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Painel do prestador de serviços',
+                            style: TextStyle(
+                              color: AppTheme.textSecondary,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              _buildPrestadorDashboard(context),
+            ] else ...[
+              _buildClienteDashboard(context),
+            ],
+          ],
+        ),
+      ),
+    );
+    final Widget body = isPrestador
+        ? homeBody
+        : IndexedStack(
+            index: _selectedNavIndex == 1 ? 1 : 0,
+            children: [
+              homeBody,
+              SearchServicesView(
+                servicos: _servicosDisponiveis,
+                controller: _buscaController,
+                carregando: _carregando,
+                onRefresh: _carregarDados,
+              ),
+            ],
+          );
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'LimpeX — ${isPrestador ? "Painel do Prestador" : "Início"}',
+          'LimpeX — ${isPrestador
+              ? "Painel do Prestador"
+              : _selectedNavIndex == 1
+              ? "Pesquisar Serviços"
+              : _selectedNavIndex == 2
+              ? "Minhas Solicitações"
+              : "Início"}',
         ),
         actions: [
           IconButton(
@@ -498,93 +613,7 @@ class _HomeViewState extends State<HomeView> {
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _carregarDados,
-        child: SingleChildScrollView(
-          controller: _scrollController,
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (isPrestador) ...[
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppTheme.secondaryYellow, Color(0xFFFFE082)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.secondaryYellow.withValues(alpha: 0.3),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      const CircleAvatar(
-                        radius: 30,
-                        backgroundColor: Colors.white,
-                        child: Icon(
-                          Icons.cleaning_services,
-                          color: AppTheme.prestadorAccent,
-                          size: 32,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    'Olá, $nomeExibicao!',
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                const Icon(
-                                  Icons.verified,
-                                  color: AppTheme.prestadorAccent,
-                                  size: 20,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              'Painel do prestador de serviços',
-                              style: TextStyle(
-                                color: AppTheme.textSecondary,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                _buildPrestadorDashboard(context),
-              ] else ...[
-                _buildClienteDashboard(context),
-              ],
-            ],
-          ),
-        ),
-      ),
+      body: body,
       bottomNavigationBar: Theme(
         data: Theme.of(context).copyWith(
           colorScheme: Theme.of(context).colorScheme.copyWith(
@@ -660,24 +689,6 @@ class _HomeViewState extends State<HomeView> {
   }
 
   Widget _buildClienteDashboard(BuildContext context) {
-    final termoBusca = _buscaController.text.trim().toLowerCase();
-    final servicosFiltrados = _servicosDisponiveis.where((item) {
-      final nome = (item['nome'] ?? '').toString().toLowerCase();
-      final nomeServico = (item['nome_servico'] ?? '').toString().toLowerCase();
-      final categoria = (item['nome_categoria'] ?? '').toString().toLowerCase();
-      final descricao = (item['descricao_servico'] ?? '')
-          .toString()
-          .toLowerCase();
-      final cidade = (item['cidade'] ?? '').toString().toLowerCase();
-      final bairro = (item['bairro'] ?? '').toString().toLowerCase();
-      return nomeServico.contains(termoBusca) ||
-          categoria.contains(termoBusca) ||
-          descricao.contains(termoBusca) ||
-          nome.contains(termoBusca) ||
-          cidade.contains(termoBusca) ||
-          bairro.contains(termoBusca);
-    }).toList();
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -743,9 +754,12 @@ class _HomeViewState extends State<HomeView> {
               ),
               const SizedBox(height: 18),
               TextField(
-                key: _pesquisaSectionKey,
                 controller: _buscaController,
                 onChanged: (_) => setState(() {}),
+                onSubmitted: (_) {
+                  FocusManager.instance.primaryFocus?.unfocus();
+                  _selecionarNavegacao(1, false);
+                },
                 textInputAction: TextInputAction.search,
                 decoration: InputDecoration(
                   hintText: 'Buscar serviço, profissional ou cidade',
@@ -794,78 +808,31 @@ class _HomeViewState extends State<HomeView> {
             label: const Text('Cadastrar novo endereço'),
           ),
         ],
-        const SizedBox(height: 28),
-
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Serviços disponíveis',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            if (servicosFiltrados.isNotEmpty)
-              Text(
-                '${servicosFiltrados.length} ${servicosFiltrados.length == 1 ? 'serviço encontrado' : 'serviços encontrados'}',
-                style: const TextStyle(
-                  color: AppTheme.textSecondary,
-                  fontSize: 12,
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        const Text(
-          'Escolha um serviço e conheça o perfil de quem oferece.',
-          style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
-        ),
-        const SizedBox(height: 12),
-        if (_carregando)
-          const Center(
-            child: Padding(
-              padding: EdgeInsets.all(28),
-              child: CircularProgressIndicator(),
-            ),
-          )
-        else if (servicosFiltrados.isEmpty)
-          Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.people_outline,
-                    color: AppTheme.primaryBlue,
-                    size: 32,
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Text(
-                      _buscaController.text.isEmpty
-                          ? 'Ainda não há serviços disponíveis. Tente novamente mais tarde.'
-                          : 'Nenhum serviço encontrado para essa busca.',
-                      style: const TextStyle(color: AppTheme.textSecondary),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          )
-        else
+        if (_servicosDisponiveis.isNotEmpty) ...[
+          const SizedBox(height: 28),
+          const Text(
+            'Mais bem avaliados',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Serviços de prestadores com as melhores avaliações.',
+            style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+          ),
+          const SizedBox(height: 12),
           LayoutBuilder(
             builder: (context, constraints) {
               final columns = constraints.maxWidth >= 640 ? 3 : 2;
-              final spacing = 12.0;
+              const spacing = 12.0;
               final cardWidth =
                   (constraints.maxWidth - spacing * (columns - 1)) / columns;
+              final destaques = _servicosDisponiveis.take(3);
 
               return Wrap(
                 spacing: spacing,
                 runSpacing: spacing,
                 children: [
-                  for (final item in servicosFiltrados)
+                  for (final item in destaques)
                     _buildServicoCard(
                       Map<String, dynamic>.from(item),
                       cardWidth,
@@ -874,6 +841,13 @@ class _HomeViewState extends State<HomeView> {
               );
             },
           ),
+        ],
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: () => _selecionarNavegacao(1, false),
+          icon: const Icon(Icons.search),
+          label: const Text('Pesquisar todos os serviços'),
+        ),
         if (widget.user != null) ...[
           const SizedBox(height: 28),
           Text(

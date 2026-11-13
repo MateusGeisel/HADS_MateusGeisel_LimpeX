@@ -79,7 +79,11 @@ export class PrestadorRepository {
       ) a ON a.id_avaliado = u.id_usuario
       WHERE s.ativo = TRUE
         AND u.status_conta = 'ATIVO'
-      ORDER BY p.selo_formalizado DESC, media_nota DESC, s.id_servico DESC;
+      ORDER BY
+        media_nota DESC,
+        total_avaliacoes DESC,
+        p.selo_formalizado DESC,
+        s.id_servico DESC;
     `;
     const result = await pool.query(query);
     return result.rows;
