@@ -10,6 +10,7 @@ class PrestadorNavigationShell extends StatefulWidget {
     required this.profile,
     required this.onRefresh,
     required this.onLogout,
+    required this.onViewAsClient,
   });
 
   final Widget dashboard;
@@ -17,6 +18,7 @@ class PrestadorNavigationShell extends StatefulWidget {
   final Widget profile;
   final VoidCallback onRefresh;
   final VoidCallback onLogout;
+  final VoidCallback onViewAsClient;
 
   @override
   State<PrestadorNavigationShell> createState() =>
@@ -38,7 +40,7 @@ class _PrestadorNavigationShellState extends State<PrestadorNavigationShell> {
             foregroundColor: Colors.white,
             padding: EdgeInsets.zero,
           ),
-          onPressed: () => setState(() => _selectedIndex = 0),
+          onPressed: widget.onViewAsClient,
           icon: const Icon(Icons.home_outlined, size: 18),
           label: const Text('LimpeX'),
         ),

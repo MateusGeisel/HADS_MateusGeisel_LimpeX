@@ -12,12 +12,14 @@ class SearchServicesView extends StatefulWidget {
     required this.controller,
     required this.carregando,
     required this.onRefresh,
+    this.idUsuarioLogado,
   });
 
   final List<dynamic> servicos;
   final TextEditingController controller;
   final bool carregando;
   final Future<void> Function() onRefresh;
+  final int? idUsuarioLogado;
 
   @override
   State<SearchServicesView> createState() => _SearchServicesViewState();
@@ -212,6 +214,7 @@ class _SearchServicesViewState extends State<SearchServicesView> {
                     child: _SearchServiceCard(
                       key: ValueKey(resultados[index]['id_servico']),
                       servico: resultados[index],
+                      idUsuarioLogado: widget.idUsuarioLogado,
                     ),
                   ),
                   childCount: resultados.length,
@@ -299,9 +302,14 @@ class _SearchServicesViewState extends State<SearchServicesView> {
 }
 
 class _SearchServiceCard extends StatefulWidget {
-  const _SearchServiceCard({super.key, required this.servico});
+  const _SearchServiceCard({
+    super.key,
+    required this.servico,
+    this.idUsuarioLogado,
+  });
 
   final Map<String, dynamic> servico;
+  final int? idUsuarioLogado;
 
   @override
   State<_SearchServiceCard> createState() => _SearchServiceCardState();
@@ -323,6 +331,12 @@ class _SearchServiceCardState extends State<_SearchServiceCard> {
       servico['foto_perfil'],
     );
     final idPrestador = int.tryParse(servico['id_prestador']?.toString() ?? '');
+    final idUsuarioPrestador = int.tryParse(
+      servico['id_usuario']?.toString() ?? '',
+    );
+    final meuAnuncio =
+        widget.idUsuarioLogado != null &&
+        idUsuarioPrestador == widget.idUsuarioLogado;
     final nota = double.tryParse(servico['media_nota']?.toString() ?? '') ?? 0;
     final totalAvaliacoes =
         int.tryParse(servico['total_avaliacoes']?.toString() ?? '') ?? 0;
@@ -341,7 +355,10 @@ class _SearchServiceCardState extends State<_SearchServiceCard> {
             : () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => PerfilPrestadorView(idPrestador: idPrestador),
+                  builder: (_) => PerfilPrestadorView(
+                    idPrestador: idPrestador,
+                    somenteVisualizacao: meuAnuncio,
+                  ),
                 ),
               ),
         child: Column(

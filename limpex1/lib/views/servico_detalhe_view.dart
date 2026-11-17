@@ -9,6 +9,7 @@ class ServicoDetalheView extends StatefulWidget {
   final String nomePrestador;
   final VoidCallback onSolicitar;
   final bool agendaDisponivel;
+  final bool somenteVisualizacao;
 
   const ServicoDetalheView({
     super.key,
@@ -16,6 +17,7 @@ class ServicoDetalheView extends StatefulWidget {
     required this.nomePrestador,
     required this.onSolicitar,
     required this.agendaDisponivel,
+    this.somenteVisualizacao = false,
   });
 
   @override
@@ -167,10 +169,18 @@ class _ServicoDetalheViewState extends State<ServicoDetalheView> {
         child: SizedBox(
           height: 50,
           child: ElevatedButton.icon(
-            onPressed: widget.agendaDisponivel ? widget.onSolicitar : null,
-            icon: const Icon(Icons.add_circle_outline),
+            onPressed: widget.agendaDisponivel && !widget.somenteVisualizacao
+                ? widget.onSolicitar
+                : null,
+            icon: Icon(
+              widget.somenteVisualizacao
+                  ? Icons.storefront_outlined
+                  : Icons.add_circle_outline,
+            ),
             label: Text(
-              widget.agendaDisponivel
+              widget.somenteVisualizacao
+                  ? 'Seu anúncio'
+                  : widget.agendaDisponivel
                   ? 'Solicitar este serviço'
                   : 'Agenda fechada no momento',
             ),

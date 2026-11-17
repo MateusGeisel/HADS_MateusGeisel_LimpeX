@@ -88,6 +88,7 @@ void main() {
             servicos: [
               {
                 ...servicos.first,
+                'id_usuario': 1,
                 'foto_perfil': fotoPerfil,
                 'fotos_servicos': [
                   'https://example.com/foto-1.jpg',
@@ -98,12 +99,14 @@ void main() {
             controller: controller,
             carregando: false,
             onRefresh: () async {},
+            idUsuarioLogado: 1,
           ),
         ),
       ),
     );
     await tester.pump();
 
+    expect(find.text('Pintura residencial'), findsOneWidget);
     expect(find.byType(PageView), findsOneWidget);
     final pageView = tester.widget<PageView>(find.byType(PageView));
     expect(

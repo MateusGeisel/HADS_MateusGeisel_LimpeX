@@ -33,6 +33,8 @@ void main() {
   testWidgets('mantém o estado das abas ao alternar a navegação', (
     tester,
   ) async {
+    var abriuVitrinePublica = false;
+
     Finder navigationLabel(String label) => find.descendant(
       of: find.byType(BottomNavigationBar),
       matching: find.text(label),
@@ -46,6 +48,7 @@ void main() {
           profile: const Center(child: Text('Conteúdo do perfil')),
           onRefresh: () {},
           onLogout: () {},
+          onViewAsClient: () => abriuVitrinePublica = true,
         ),
       ),
     );
@@ -68,12 +71,13 @@ void main() {
 
     await tester.tap(find.text('LimpeX'));
     await tester.pumpAndSettle();
-    expect(find.text('Conteúdo do dashboard'), findsOneWidget);
+    expect(abriuVitrinePublica, isTrue);
+    expect(find.text('Serviços: 1'), findsOneWidget);
     expect(
       tester
           .widget<BottomNavigationBar>(find.byType(BottomNavigationBar))
           .currentIndex,
-      0,
+      1,
     );
   });
 }

@@ -10,8 +10,13 @@ import 'components/service_tags.dart';
 
 class PerfilPrestadorView extends StatefulWidget {
   final int idPrestador;
+  final bool somenteVisualizacao;
 
-  const PerfilPrestadorView({super.key, required this.idPrestador});
+  const PerfilPrestadorView({
+    super.key,
+    required this.idPrestador,
+    this.somenteVisualizacao = false,
+  });
 
   @override
   State<PerfilPrestadorView> createState() => _PerfilPrestadorViewState();
@@ -88,6 +93,8 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
   }
 
   Future<void> _solicitarServico(Map<String, dynamic> servico) async {
+    if (widget.somenteVisualizacao) return;
+
     final token = await _authService.getToken();
     if (!mounted) return;
 
@@ -140,6 +147,7 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
           servico: {...servico, 'foto_perfil': fotoPerfil},
           nomePrestador: nomePrestador,
           agendaDisponivel: agendaDisponivel,
+          somenteVisualizacao: widget.somenteVisualizacao,
           onSolicitar: () {
             Navigator.pop(context);
             _solicitarServico(servico);
@@ -563,12 +571,18 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton.icon(
-                    onPressed: agendaDisponivel
+                    onPressed: agendaDisponivel && !widget.somenteVisualizacao
                         ? () => _solicitarServico(servico)
                         : null,
-                    icon: const Icon(Icons.calendar_month_outlined),
+                    icon: Icon(
+                      widget.somenteVisualizacao
+                          ? Icons.storefront_outlined
+                          : Icons.calendar_month_outlined,
+                    ),
                     label: Text(
-                      agendaDisponivel
+                      widget.somenteVisualizacao
+                          ? 'Seu anúncio'
+                          : agendaDisponivel
                           ? 'Solicitar serviço'
                           : 'Agenda indisponível',
                     ),

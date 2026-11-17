@@ -22,8 +22,9 @@ import 'perfil_cliente_publico_view.dart';
 
 class HomeView extends StatefulWidget {
   final UserModel? user; // 👈 Opcional para aceitar visitantes sem login
+  final bool mostrarVitrinePublica;
 
-  const HomeView({super.key, this.user}); // 👈 Sem o required
+  const HomeView({super.key, this.user, this.mostrarVitrinePublica = false});
 
   @override
   State<HomeView> createState() => _HomeViewState();
@@ -44,6 +45,9 @@ class _HomeViewState extends State<HomeView> {
   String? _nomeAtualizado;
   String? _fotoPerfilPrestador;
 
+  bool get _modoVitrinePrestador =>
+      widget.mostrarVitrinePublica && widget.user?.tipoPerfil == 'PRESTADOR';
+
   @override
   void dispose() {
     _scrollController.dispose();
@@ -62,7 +66,7 @@ class _HomeViewState extends State<HomeView> {
 
     final isPrestador = widget.user?.tipoPerfil == 'PRESTADOR';
 
-    if (isPrestador) {
+    if (isPrestador && !_modoVitrinePrestador) {
       final fotoFuture = _carregarFotoPerfil();
       final lista = await _solicitacaoService.buscarSolicitacoesDisponiveis();
       if (mounted) {
@@ -74,7 +78,7 @@ class _HomeViewState extends State<HomeView> {
       await fotoFuture;
     } else {
       // Se não houver usuário logado (visitante), busca apenas o catálogo público.
-      final listaSolicitacoes = widget.user != null
+      final listaSolicitacoes = widget.user != null && !isPrestador
           ? await _solicitacaoService.buscarMinhasSolicitacoes()
           : [];
       final listaServicos = await _prestadorService.listarServicosDisponiveis();
@@ -508,7 +512,8 @@ class _HomeViewState extends State<HomeView> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isPrestador = widget.user?.tipoPerfil == 'PRESTADOR';
+    final bool isPrestador =
+        widget.user?.tipoPerfil == 'PRESTADOR' && !_modoVitrinePrestador;
     final String nomeExibicao =
         _nomeAtualizado ?? widget.user?.nome ?? 'Visitante';
     final Widget homeBody = RefreshIndicator(
@@ -640,6 +645,15 @@ class _HomeViewState extends State<HomeView> {
         ),
         onRefresh: _carregarDados,
         onLogout: () => _fazerLogout(context),
+        onViewAsClient: () {
+          Navigator.push<void>(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  HomeView(user: widget.user, mostrarVitrinePublica: true),
+            ),
+          );
+        },
       );
     }
 
@@ -654,6 +668,7 @@ class _HomeViewState extends State<HomeView> {
           controller: _buscaController,
           carregando: _carregando,
           onRefresh: _carregarDados,
+          idUsuarioLogado: widget.user?.id,
         ),
         if (widget.user case final user? when _profileTabOpened)
           ClientProfileView(
@@ -720,6 +735,12 @@ class _HomeViewState extends State<HomeView> {
                 ),
               ]
             : [
+                if (_modoVitrinePrestador)
+                  IconButton(
+                    tooltip: 'Voltar ao Painel do Prestador',
+                    icon: const Icon(Icons.dashboard_outlined),
+                    onPressed: () => Navigator.pop(context),
+                  ),
                 IconButton(
                   icon: const Icon(Icons.refresh),
                   tooltip: 'Atualizar',
@@ -787,6 +808,26 @@ class _HomeViewState extends State<HomeView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (_modoVitrinePrestador) ...[
+          Card(
+            child: ListTile(
+              leading: const Icon(
+                Icons.storefront_outlined,
+                color: AppTheme.primaryBlue,
+              ),
+              title: const Text('Vitrine pública'),
+              subtitle: const Text(
+                'Você está visualizando o app como cliente.',
+              ),
+              trailing: IconButton(
+                tooltip: 'Voltar ao Painel do Prestador',
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.dashboard_outlined),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         SizedBox(
           width: double.infinity,
           child: ClipRRect(
@@ -914,7 +955,7 @@ class _HomeViewState extends State<HomeView> {
           ),
         ),
         const SizedBox(height: 20),
-        if (widget.user != null) ...[
+        if (widget.user != null && !_modoVitrinePrestador) ...[
           ElevatedButton.icon(
             onPressed: _abrirSolicitacao,
             icon: const Icon(Icons.add_circle_outline),
@@ -988,6 +1029,13 @@ class _HomeViewState extends State<HomeView> {
     final totalAvaliacoes =
         int.tryParse(item['total_avaliacoes']?.toString() ?? '0') ?? 0;
     final idPrestador = int.tryParse(item['id_prestador']?.toString() ?? '');
+    final idUsuarioPrestador = int.tryParse(
+      item['id_usuario']?.toString() ?? '',
+    );
+    final meuAnuncio =
+        _modoVitrinePrestador &&
+        widget.user?.id != null &&
+        idUsuarioPrestador == widget.user!.id;
     final temSelo = item['selo_formalizado'] == true;
     final tipoCobranca = switch (item['tipo_cobranca']?.toString()) {
       'TURNO' => 'por turno',
@@ -1009,8 +1057,10 @@ class _HomeViewState extends State<HomeView> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) =>
-                          PerfilPrestadorView(idPrestador: idPrestador),
+                      builder: (_) => PerfilPrestadorView(
+                        idPrestador: idPrestador,
+                        somenteVisualizacao: meuAnuncio,
+                      ),
                     ),
                   );
                 },
