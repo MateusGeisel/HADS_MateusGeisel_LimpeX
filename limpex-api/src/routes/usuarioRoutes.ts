@@ -4,6 +4,7 @@ import { authMiddleware } from '../middlewares/authMiddleware';
 
 const usuarioRouter = Router();
 
+usuarioRouter.get('/:id/perfil-publico', UsuarioController.getPublicClientProfile);
 usuarioRouter.get('/me', authMiddleware, UsuarioController.getProfile);
 usuarioRouter.put('/me', authMiddleware, UsuarioController.updateProfile);
 

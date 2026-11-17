@@ -8,7 +8,80 @@ type ResultadoAvaliacao =
   | { resultado: 'PRESTADOR_NAO_ENCONTRADO' }
   | { resultado: 'CRIADA'; avaliacao: Record<string, unknown> };
 
+type ResultadoAvaliacaoCliente =
+  | { resultado: 'NAO_ENCONTRADA' }
+  | { resultado: 'NAO_E_PRESTADOR' }
+  | { resultado: 'NAO_CONCLUIDA' }
+  | { resultado: 'JA_AVALIADA' }
+  | { resultado: 'CRIADA'; avaliacao: Record<string, unknown> };
+
 export class AvaliacaoRepository {
+  static async criarAvaliacaoCliente(
+    id_solicitacao: number,
+    id_prestador: number,
+    nota: number,
+    comentario: string | null,
+  ): Promise<ResultadoAvaliacaoCliente> {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const solicitacao = await client.query(
+        `SELECT id_prestador, id_contratante, status
+         FROM solicitacao
+         WHERE id_solicitacao = $1
+         FOR UPDATE;`,
+        [id_solicitacao],
+      );
+      const dadosSolicitacao = solicitacao.rows[0];
+      if (!dadosSolicitacao) {
+        await client.query('ROLLBACK');
+        return { resultado: 'NAO_ENCONTRADA' };
+      }
+      if (dadosSolicitacao.id_prestador !== id_prestador) {
+        await client.query('ROLLBACK');
+        return { resultado: 'NAO_E_PRESTADOR' };
+      }
+      if (dadosSolicitacao.status !== 'CONCLUIDO') {
+        await client.query('ROLLBACK');
+        return { resultado: 'NAO_CONCLUIDA' };
+      }
+
+      const avaliacaoExistente = await client.query(
+        `SELECT 1
+         FROM avaliacao_cliente
+         WHERE id_solicitacao = $1
+         LIMIT 1;`,
+        [id_solicitacao],
+      );
+      if (avaliacaoExistente.rows[0]) {
+        await client.query('ROLLBACK');
+        return { resultado: 'JA_AVALIADA' };
+      }
+
+      const inserida = await client.query(
+        `INSERT INTO avaliacao_cliente
+          (id_solicitacao, id_prestador, id_cliente, nota, comentario)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING id_avaliacao_cliente, id_solicitacao, id_prestador,
+                   id_cliente, nota, comentario, criado_em;`,
+        [
+          id_solicitacao,
+          id_prestador,
+          dadosSolicitacao.id_contratante,
+          nota,
+          comentario,
+        ],
+      );
+      await client.query('COMMIT');
+      return { resultado: 'CRIADA', avaliacao: inserida.rows[0] };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   static async criar(
     id_solicitacao: number,
     id_avaliador: number,
@@ -98,6 +171,25 @@ export class AvaliacaoRepository {
        WHERE p.id_prestador = $1
        ORDER BY a.criado_em DESC, a.id_avaliacao DESC;`,
       [id_prestador],
+    );
+    return result.rows;
+  }
+
+  static async listarPorCliente(id_cliente: number) {
+    const result = await pool.query(
+      `SELECT
+         a.id_avaliacao_cliente,
+         a.id_solicitacao,
+         a.nota,
+         a.comentario,
+         a.criado_em,
+         u.nome AS nome_prestador
+       FROM avaliacao_cliente a
+       JOIN prestador p ON p.id_prestador = a.id_prestador
+       JOIN usuario u ON u.id_usuario = p.id_usuario
+       WHERE a.id_cliente = $1
+       ORDER BY a.criado_em DESC, a.id_avaliacao_cliente DESC;`,
+      [id_cliente],
     );
     return result.rows;
   }

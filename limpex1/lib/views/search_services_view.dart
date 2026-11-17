@@ -313,12 +313,15 @@ class _SearchServiceCardState extends State<_SearchServiceCard> {
   @override
   Widget build(BuildContext context) {
     final servico = widget.servico;
-    final fotos = PrestadorService.extrairFotos(
-      servico['fotos_servicos'] ?? servico['fotos'],
+    final fotos = PrestadorService.fotosParaExibicao(
+      fotoPerfil: servico['foto_perfil'],
+      fotosServico: servico['fotos_servicos'] ?? servico['fotos'],
     );
     final nome = servico['nome_servico']?.toString() ?? 'Serviço';
     final nomePrestador = servico['nome']?.toString() ?? 'Profissional';
-    final fotoPerfil = servico['foto_perfil']?.toString().trim();
+    final fotoPerfil = PrestadorService.extrairFotoPerfil(
+      servico['foto_perfil'],
+    );
     final idPrestador = int.tryParse(servico['id_prestador']?.toString() ?? '');
     final nota = double.tryParse(servico['media_nota']?.toString() ?? '') ?? 0;
     final totalAvaliacoes =

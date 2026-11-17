@@ -28,8 +28,10 @@ class _ServicoDetalheViewState extends State<ServicoDetalheView> {
   @override
   Widget build(BuildContext context) {
     final servico = widget.servico;
-    final fotos = PrestadorService.extrairFotos(
-      servico['fotos'] ??
+    final fotos = PrestadorService.fotosParaExibicao(
+      fotoPerfil: servico['foto_perfil'],
+      fotosServico:
+          servico['fotos'] ??
           servico['foto_url'] ??
           servico['imagem_url'] ??
           servico['imagens'],

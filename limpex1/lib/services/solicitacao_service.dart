@@ -205,4 +205,28 @@ class SolicitacaoService {
       return false;
     }
   }
+
+  Future<bool> avaliarClienteSolicitacao({
+    required int idSolicitacao,
+    required int nota,
+    String? comentario,
+  }) async {
+    final token = await _authService.getToken();
+    if (token == null) return false;
+
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/$idSolicitacao/avaliar-cliente'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'nota': nota, 'comentario': comentario}),
+      );
+      return response.statusCode == 201;
+    } catch (e) {
+      debugPrint('Erro ao avaliar cliente: $e');
+      return false;
+    }
+  }
 }

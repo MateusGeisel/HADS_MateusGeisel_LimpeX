@@ -30,7 +30,8 @@ O banco de dados do LimpeX é composto pelas seguintes tabelas principais:
 7. `categoria_servico` & `servico`: Portfólio de serviços oferecidos por cada prestador.
 8. `solicitacao`: Ciclo de vida dos agendamentos e chamados de serviço.
 9. `documento_fiscal`: Armazenamento de PDFs/XMLs de notas e recibos gerados.
-10. `mensagem` & `avaliacao`: Comunicação via chat e reputação mútua entre usuários.
+10. `mensagem`: Comunicação entre os usuários.
+11. `avaliacao` & `avaliacao_cliente`: Avaliações cliente→prestador e prestador→cliente.
 
 ---
 
@@ -60,9 +61,12 @@ O banco de dados do LimpeX é composto pelas seguintes tabelas principais:
 - `PATCH /solicitacoes/:id/concluir` — Prestador vinculado conclui um atendimento aceito ou em andamento
 - `PATCH /solicitacoes/:id/cancelar` — Contratante cancela uma solicitação com pelo menos 24 horas de antecedência
 - `POST /solicitacoes/:id/avaliar` — Contratante registra uma avaliação de 1 a 5 após a conclusão
+- `POST /solicitacoes/:id/avaliar-cliente` — Prestador registra uma avaliação de 1 a 5 do cliente após a conclusão
 - `GET /prestadores/:id/avaliacoes` — Consultar média, quantidade e avaliações públicas do prestador
+- `GET /usuarios/:id/perfil-publico` — Consultar perfil, reputação e histórico público de avaliações do cliente
 
 Antes de publicar a API, aplique [a migração de conclusão](./migrations/20261112_add_concluido_em.sql) no PostgreSQL. Ela adiciona `concluido_em` caso a coluna ainda não exista.
+Para habilitar as avaliações de clientes, aplique [a migração de avaliações bidirecionais](./migrations/20261117_add_avaliacao_cliente.sql). Ela cria `avaliacao_cliente` com unicidade por solicitação e adiciona `usuario.criado_em`; contas já existentes sem data de criação permanecem sem data histórica disponível.
 
 ### 🩺 Saúde do Sistema
 - `GET /health` — Healthcheck da API e conexão em tempo real com o banco de dados PostgreSQL

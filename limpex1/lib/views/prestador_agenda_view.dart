@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../main.dart';
 import '../services/solicitacao_service.dart';
+import 'avaliar_cliente_view.dart';
+import 'perfil_cliente_publico_view.dart';
 
 class PrestadorAgendaView extends StatefulWidget {
   const PrestadorAgendaView({super.key});
@@ -134,6 +137,33 @@ class _PrestadorAgendaViewState extends State<PrestadorAgendaView> {
     if (sucesso) await _carregarAgenda();
   }
 
+  Future<void> _abrirPerfilCliente(int idCliente) async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PerfilClientePublicoView(idCliente: idCliente),
+      ),
+    );
+  }
+
+  Future<void> _avaliarCliente(Map<String, dynamic> solicitacao) async {
+    final id = int.tryParse(solicitacao['id_solicitacao']?.toString() ?? '');
+    if (id == null) return;
+
+    final avaliacaoEnviada = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AvaliarClienteView(
+          idSolicitacao: id,
+          nomeCliente:
+              solicitacao['nome_cliente']?.toString() ?? 'Cliente LimpeX',
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (avaliacaoEnviada == true) await _carregarAgenda();
+  }
+
   String _formatarData(dynamic valor) {
     final data = DateTime.tryParse(valor?.toString() ?? '');
     if (data == null) return 'Data não informada';
@@ -212,6 +242,7 @@ class _PrestadorAgendaViewState extends State<PrestadorAgendaView> {
   Widget _buildSolicitacaoCard(Map<String, dynamic> item) {
     final status = item['status']?.toString() ?? 'PENDENTE';
     final id = int.tryParse(item['id_solicitacao']?.toString() ?? '');
+    final idCliente = int.tryParse(item['id_cliente']?.toString() ?? '');
     final respondendo = id != null && _respondendo.contains(id);
     final horario = item['horario_agendamento']?.toString();
     final nomeServico =
@@ -261,7 +292,51 @@ class _PrestadorAgendaViewState extends State<PrestadorAgendaView> {
               ],
             ),
             const SizedBox(height: 8),
-            Text('Cliente: ${item['nome_cliente'] ?? 'Cliente LimpeX'}'),
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                  child: ClipOval(
+                    child:
+                        item['foto_perfil_cliente']
+                                ?.toString()
+                                .trim()
+                                .isNotEmpty ==
+                            true
+                        ? Image.network(
+                            item['foto_perfil_cliente'].toString().trim(),
+                            width: 40,
+                            height: 40,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => const Icon(
+                              Icons.person_outline,
+                              color: AppTheme.primaryBlue,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.person_outline,
+                            color: AppTheme.primaryBlue,
+                          ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    item['nome_cliente']?.toString() ?? 'Cliente LimpeX',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            if (idCliente != null)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => _abrirPerfilCliente(idCliente),
+                  icon: const Icon(Icons.person_search_outlined),
+                  label: const Text('Ver perfil do cliente'),
+                ),
+              ),
             const SizedBox(height: 4),
             Text(
               'Data: ${_formatarData(item['data_agendamento'])}'
@@ -325,6 +400,24 @@ class _PrestadorAgendaViewState extends State<PrestadorAgendaView> {
                       : const Icon(Icons.task_alt),
                   label: const Text('Marcar como concluído'),
                 ),
+              ),
+            ],
+            if (status == 'CONCLUIDO' && item['cliente_avaliado'] != true) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: respondendo ? null : () => _avaliarCliente(item),
+                  icon: const Icon(Icons.star_outline),
+                  label: const Text('Avaliar cliente'),
+                ),
+              ),
+            ],
+            if (status == 'CONCLUIDO' && item['cliente_avaliado'] == true) ...[
+              const SizedBox(height: 8),
+              const Text(
+                'Cliente avaliado',
+                style: TextStyle(color: AppTheme.textSecondary),
               ),
             ],
           ],

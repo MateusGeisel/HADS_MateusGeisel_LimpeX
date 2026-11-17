@@ -88,6 +88,8 @@ export class SolicitacaoRepository {
     const query = `
       SELECT
         s.id_solicitacao,
+        u.id_usuario AS id_cliente,
+        u.foto_perfil AS foto_perfil_cliente,
         s.id_servico,
         s.id_prestador,
         s.status,
@@ -121,6 +123,8 @@ export class SolicitacaoRepository {
     const query = `
       SELECT
         s.id_solicitacao,
+        s.id_contratante AS id_cliente,
+        u.foto_perfil AS foto_perfil_cliente,
         s.id_servico,
         s.id_prestador,
         s.status,
@@ -131,9 +135,13 @@ export class SolicitacaoRepository {
         ser.nome AS nome_servico,
         l.cidade,
         l.bairro,
-        cat.nome AS nome_categoria
+        cat.nome AS nome_categoria,
+        ac.id_avaliacao_cliente IS NOT NULL AS cliente_avaliado,
+        ac.nota AS avaliacao_cliente_nota,
+        ac.comentario AS avaliacao_cliente_comentario
       FROM solicitacao s
       JOIN usuario u ON s.id_contratante = u.id_usuario
+      LEFT JOIN avaliacao_cliente ac ON ac.id_solicitacao = s.id_solicitacao
       LEFT JOIN localizacao l ON u.id_localizacao = l.id_localizacao
       LEFT JOIN servico ser ON s.id_servico = ser.id_servico
       LEFT JOIN categoria_servico cat ON ser.id_categoria = cat.id_categoria

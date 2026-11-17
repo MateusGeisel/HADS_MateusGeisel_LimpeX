@@ -1,6 +1,33 @@
 import { pool } from '../config/database';
 
 export class UserRepository {
+  static async findPublicClientProfile(id_usuario: number) {
+    const result = await pool.query(
+      `SELECT
+         u.id_usuario AS id_cliente,
+         u.nome,
+         u.foto_perfil,
+         u.criado_em AS cadastrado_em,
+         COALESCE(s.total_solicitacoes, 0)::INTEGER AS total_solicitacoes,
+         COALESCE(a.media_avaliacoes, 0.0)::NUMERIC(3, 2) AS media_avaliacoes,
+         COALESCE(a.total_avaliacoes, 0)::INTEGER AS total_avaliacoes
+       FROM usuario u
+       LEFT JOIN LATERAL (
+         SELECT COUNT(*) AS total_solicitacoes
+         FROM solicitacao
+         WHERE id_contratante = u.id_usuario
+       ) s ON TRUE
+       LEFT JOIN LATERAL (
+         SELECT AVG(nota) AS media_avaliacoes, COUNT(*) AS total_avaliacoes
+         FROM avaliacao_cliente
+         WHERE id_cliente = u.id_usuario
+       ) a ON TRUE
+       WHERE u.id_usuario = $1 AND u.status_conta = 'ATIVO';`,
+      [id_usuario],
+    );
+    return result.rows[0];
+  }
+
   static async findProfileById(id_usuario: number) {
     const query = `
       SELECT id_usuario, nome, email, telefone, foto_perfil

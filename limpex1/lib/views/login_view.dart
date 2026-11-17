@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../constants/app_assets.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../main.dart';
 import 'home_view.dart';
@@ -43,7 +45,9 @@ class _LoginViewState extends State<LoginView> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_authViewModel.errorMessage ?? 'Erro ao realizar login.'),
+          content: Text(
+            _authViewModel.errorMessage ?? 'Erro ao realizar login.',
+          ),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -56,14 +60,12 @@ class _LoginViewState extends State<LoginView> {
       body: Stack(
         children: [
           // 1. Imagem de Fundo
-          Container(
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: NetworkImage(
-                  'https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=1200&auto=format&fit=crop',
-                ),
-                fit: BoxFit.cover,
-              ),
+          Positioned.fill(
+            child: Image.network(
+              AppAssets.coverImage,
+              fit: BoxFit.cover,
+              alignment: Alignment.center,
+              errorBuilder: (_, _, _) => Container(color: AppTheme.primaryBlue),
             ),
           ),
 
@@ -85,7 +87,10 @@ class _LoginViewState extends State<LoginView> {
           // 3. Conteúdo Centralizado
           Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24.0,
+                vertical: 32.0,
+              ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -94,7 +99,10 @@ class _LoginViewState extends State<LoginView> {
                     decoration: BoxDecoration(
                       color: AppTheme.primaryBlue.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.3),
+                        width: 2,
+                      ),
                     ),
                     child: const Icon(
                       Icons.cleaning_services_rounded,
@@ -156,10 +164,14 @@ class _LoginViewState extends State<LoginView> {
                             keyboardType: TextInputType.emailAddress,
                             decoration: const InputDecoration(
                               labelText: 'E-mail',
-                              prefixIcon: Icon(Icons.email_outlined, color: AppTheme.primaryBlue),
+                              prefixIcon: Icon(
+                                Icons.email_outlined,
+                                color: AppTheme.primaryBlue,
+                              ),
                             ),
                             validator: (v) {
-                              if (v == null || v.isEmpty) return 'Informe seu e-mail';
+                              if (v == null || v.isEmpty)
+                                return 'Informe seu e-mail';
                               if (!v.contains('@')) return 'E-mail inválido';
                               return null;
                             },
@@ -171,20 +183,29 @@ class _LoginViewState extends State<LoginView> {
                             obscureText: _obscurePassword,
                             decoration: InputDecoration(
                               labelText: 'Senha',
-                              prefixIcon: const Icon(Icons.lock_outline, color: AppTheme.primaryBlue),
+                              prefixIcon: const Icon(
+                                Icons.lock_outline,
+                                color: AppTheme.primaryBlue,
+                              ),
                               suffixIcon: IconButton(
                                 icon: Icon(
-                                  _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                  _obscurePassword
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
                                   color: Colors.grey,
                                 ),
                                 onPressed: () {
-                                  setState(() => _obscurePassword = !_obscurePassword);
+                                  setState(
+                                    () => _obscurePassword = !_obscurePassword,
+                                  );
                                 },
                               ),
                             ),
                             validator: (v) {
-                              if (v == null || v.isEmpty) return 'Informe sua senha';
-                              if (v.length < 6) return 'A senha deve ter no mínimo 6 caracteres';
+                              if (v == null || v.isEmpty)
+                                return 'Informe sua senha';
+                              if (v.length < 6)
+                                return 'A senha deve ter no mínimo 6 caracteres';
                               return null;
                             },
                           ),
@@ -213,7 +234,10 @@ class _LoginViewState extends State<LoginView> {
                                     )
                                   : const Text(
                                       'Entrar',
-                                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                             ),
                           ),
@@ -229,13 +253,17 @@ class _LoginViewState extends State<LoginView> {
                     children: [
                       Text(
                         'Ainda não tem uma conta? ',
-                        style: TextStyle(color: Colors.white.withValues(alpha: 0.9)),
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.9),
+                        ),
                       ),
                       GestureDetector(
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const RegisterView()),
+                            MaterialPageRoute(
+                              builder: (_) => const RegisterView(),
+                            ),
                           );
                         },
                         child: const Text(

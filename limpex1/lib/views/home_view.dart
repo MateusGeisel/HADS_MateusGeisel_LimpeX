@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../constants/app_assets.dart';
 import '../models/user_model.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../services/solicitacao_service.dart';
@@ -17,6 +18,7 @@ import 'search_services_view.dart';
 import 'client_profile_view.dart';
 import 'prestador_navigation_shell.dart';
 import 'prestador_profile_view.dart';
+import 'perfil_cliente_publico_view.dart';
 
 class HomeView extends StatefulWidget {
   final UserModel? user; // 👈 Opcional para aceitar visitantes sem login
@@ -253,6 +255,7 @@ class _HomeViewState extends State<HomeView> {
 
   void _mostrarDetalhesSolicitacao(Map<String, dynamic> item) {
     final messenger = ScaffoldMessenger.of(context);
+    final idCliente = int.tryParse(item['id_cliente']?.toString() ?? '');
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -284,21 +287,57 @@ class _HomeViewState extends State<HomeView> {
               const Divider(height: 24),
               Row(
                 children: [
-                  const Icon(
-                    Icons.person_outline,
-                    color: AppTheme.primaryBlue,
-                    size: 20,
+                  CircleAvatar(
+                    backgroundColor: AppTheme.primaryBlue.withValues(
+                      alpha: 0.1,
+                    ),
+                    child: ClipOval(
+                      child:
+                          item['foto_perfil_cliente']
+                                  ?.toString()
+                                  .trim()
+                                  .isNotEmpty ==
+                              true
+                          ? Image.network(
+                              item['foto_perfil_cliente'].toString().trim(),
+                              width: 40,
+                              height: 40,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => const Icon(
+                                Icons.person_outline,
+                                color: AppTheme.primaryBlue,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.person_outline,
+                              color: AppTheme.primaryBlue,
+                            ),
+                    ),
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Cliente: ${item['nome_cliente'] ?? "Cliente LimpeX"}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      item['nome_cliente']?.toString() ?? 'Cliente LimpeX',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
                     ),
                   ),
                 ],
               ),
+              if (idCliente != null)
+                TextButton.icon(
+                  onPressed: () => Navigator.push<void>(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          PerfilClientePublicoView(idCliente: idCliente),
+                    ),
+                  ),
+                  icon: const Icon(Icons.person_search_outlined),
+                  label: const Text('Ver perfil do cliente'),
+                ),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -740,116 +779,123 @@ class _HomeViewState extends State<HomeView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
+        SizedBox(
           width: double.infinity,
-          decoration: BoxDecoration(
+          child: ClipRRect(
             borderRadius: BorderRadius.circular(24),
-            image: const DecorationImage(
-              image: NetworkImage(
-                'https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=1200&auto=format&fit=crop',
-              ),
-              fit: BoxFit.cover,
-            ),
-          ),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomRight,
-                colors: [
-                  Colors.black.withValues(alpha: 0.58),
-                  AppTheme.primaryBlue.withValues(alpha: 0.68),
-                  Colors.black.withValues(alpha: 0.78),
-                ],
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Stack(
               children: [
-                Padding(
-                  padding: const EdgeInsets.all(22),
+                Positioned.fill(
+                  child: Image.network(
+                    AppAssets.coverImage,
+                    fit: BoxFit.cover,
+                    alignment: Alignment.center,
+                    errorBuilder: (_, _, _) =>
+                        Container(color: AppTheme.primaryBlue),
+                  ),
+                ),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.58),
+                        AppTheme.primaryBlue.withValues(alpha: 0.68),
+                        Colors.black.withValues(alpha: 0.78),
+                      ],
+                    ),
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 7,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.94),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
+                      Padding(
+                        padding: const EdgeInsets.all(22),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(
-                              Icons.verified_user_outlined,
-                              color: AppTheme.primaryBlue,
-                              size: 16,
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 7,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.94),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.verified_user_outlined,
+                                    color: AppTheme.primaryBlue,
+                                    size: 16,
+                                  ),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    'Cuidado para sua casa',
+                                    style: TextStyle(
+                                      color: AppTheme.primaryBlue,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                            SizedBox(width: 6),
+                            const SizedBox(height: 18),
                             Text(
-                              'Cuidado para sua casa',
+                              widget.user == null
+                                  ? 'Sua casa em boas mãos.'
+                                  : 'Olá, ${(_nomeAtualizado ?? widget.user!.nome).split(' ').first}!',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 27,
+                                height: 1.15,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Encontre profissionais de limpeza e escolha quem combina com você.',
                               style: TextStyle(
-                                color: AppTheme.primaryBlue,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
+                                color: Colors.white.withValues(alpha: 0.92),
+                                fontSize: 15,
+                                height: 1.4,
+                              ),
+                            ),
+                            const SizedBox(height: 18),
+                            TextField(
+                              controller: _buscaController,
+                              onChanged: (_) => setState(() {}),
+                              onSubmitted: (_) {
+                                FocusManager.instance.primaryFocus?.unfocus();
+                                _selecionarNavegacao(1);
+                              },
+                              textInputAction: TextInputAction.search,
+                              decoration: InputDecoration(
+                                hintText:
+                                    'Buscar serviço, profissional ou cidade',
+                                prefixIcon: const Icon(Icons.search),
+                                suffixIcon: _buscaController.text.isEmpty
+                                    ? null
+                                    : IconButton(
+                                        tooltip: 'Limpar busca',
+                                        onPressed: () {
+                                          _buscaController.clear();
+                                          setState(() {});
+                                        },
+                                        icon: const Icon(Icons.close),
+                                      ),
+                                filled: true,
+                                fillColor: Colors.white,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: BorderSide.none,
+                                ),
                               ),
                             ),
                           ],
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      Text(
-                        widget.user == null
-                            ? 'Sua casa em boas mãos.'
-                            : 'Olá, ${(_nomeAtualizado ?? widget.user!.nome).split(' ').first}!',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 27,
-                          height: 1.15,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Encontre profissionais de limpeza e escolha quem combina com você.',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.92),
-                          fontSize: 15,
-                          height: 1.4,
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      TextField(
-                        controller: _buscaController,
-                        onChanged: (_) => setState(() {}),
-                        onSubmitted: (_) {
-                          FocusManager.instance.primaryFocus?.unfocus();
-                          _selecionarNavegacao(1);
-                        },
-                        textInputAction: TextInputAction.search,
-                        decoration: InputDecoration(
-                          hintText: 'Buscar serviço, profissional ou cidade',
-                          prefixIcon: const Icon(Icons.search),
-                          suffixIcon: _buscaController.text.isEmpty
-                              ? null
-                              : IconButton(
-                                  tooltip: 'Limpar busca',
-                                  onPressed: () {
-                                    _buscaController.clear();
-                                    setState(() {});
-                                  },
-                                  icon: const Icon(Icons.close),
-                                ),
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide.none,
-                          ),
                         ),
                       ),
                     ],
@@ -919,7 +965,12 @@ class _HomeViewState extends State<HomeView> {
       item['fotos_servicos'] ?? item['fotos'] ?? item['foto_servico'],
     );
     final fotoServico = fotosServicos.isNotEmpty ? fotosServicos.first : null;
-    final fotoPerfil = item['foto_perfil']?.toString();
+    final fotoPerfil = PrestadorService.extrairFotoPerfil(item['foto_perfil']);
+    final fotosExibidas = PrestadorService.fotosParaExibicao(
+      fotoPerfil: fotoPerfil,
+      fotosServico: fotosServicos,
+    );
+    final fotoCapa = fotosExibidas.isNotEmpty ? fotosExibidas.first : null;
     final bairro = (item['bairro'] ?? '').toString();
     final cidade = (item['cidade'] ?? '').toString();
     final localizacao = [
@@ -963,26 +1014,21 @@ class _HomeViewState extends State<HomeView> {
                   SizedBox(
                     height: 118,
                     width: double.infinity,
-                    child: fotoServico != null
+                    child: fotoCapa != null
                         ? Image.network(
-                            fotoServico,
+                            fotoCapa,
                             fit: BoxFit.cover,
                             errorBuilder: (_, _, _) =>
-                                fotoPerfil != null && fotoPerfil.isNotEmpty
+                                fotoPerfil != null &&
+                                    fotoServico != null &&
+                                    fotoPerfil != fotoServico
                                 ? Image.network(
-                                    fotoPerfil,
+                                    fotoServico,
                                     fit: BoxFit.cover,
                                     errorBuilder: (_, _, _) =>
                                         _buildPrestadorImageFallback(),
                                   )
                                 : _buildPrestadorImageFallback(),
-                          )
-                        : fotoPerfil != null && fotoPerfil.isNotEmpty
-                        ? Image.network(
-                            fotoPerfil,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) =>
-                                _buildPrestadorImageFallback(),
                           )
                         : _buildPrestadorImageFallback(),
                   ),

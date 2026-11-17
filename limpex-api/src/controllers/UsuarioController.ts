@@ -1,8 +1,31 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
+import { AvaliacaoRepository } from '../repositories/AvaliacaoRepository';
 import { UserRepository } from '../repositories/UserRepository';
 
 export class UsuarioController {
+  static async getPublicClientProfile(req: Request, res: Response): Promise<void> {
+    try {
+      const id_cliente = Number(req.params.id);
+      if (!Number.isInteger(id_cliente) || id_cliente <= 0) {
+        res.status(400).json({ error: 'ID de cliente inválido.' });
+        return;
+      }
+
+      const profile = await UserRepository.findPublicClientProfile(id_cliente);
+      if (!profile) {
+        res.status(404).json({ error: 'Perfil do cliente não encontrado.' });
+        return;
+      }
+
+      const avaliacoes = await AvaliacaoRepository.listarPorCliente(id_cliente);
+      res.status(200).json({ ...profile, avaliacoes });
+    } catch (error) {
+      console.error('Erro ao buscar perfil público do cliente:', error);
+      res.status(500).json({ error: 'Erro interno ao buscar perfil do cliente.' });
+    }
+  }
+
   static async getProfile(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       if (!req.userId) {

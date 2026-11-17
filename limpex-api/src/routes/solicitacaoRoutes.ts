@@ -13,5 +13,6 @@ solicitacaoRouter.patch('/:id/recusar', authMiddleware, SolicitacaoController.re
 solicitacaoRouter.patch('/:id/concluir', authMiddleware, SolicitacaoController.concluirSolicitacao);
 solicitacaoRouter.patch('/:id/cancelar', authMiddleware, SolicitacaoController.cancelarSolicitacao);
 solicitacaoRouter.post('/:id/avaliar', authMiddleware, SolicitacaoController.avaliarSolicitacao);
+solicitacaoRouter.post('/:id/avaliar-cliente', authMiddleware, SolicitacaoController.avaliarCliente);
 
 export default solicitacaoRouter;

@@ -78,6 +78,7 @@ void main() {
   testWidgets('serviço com várias fotos permite deslizar a galeria', (
     tester,
   ) async {
+    const fotoPerfil = 'https://example.com/perfil-ana.jpg';
     final controller = TextEditingController();
     addTearDown(controller.dispose);
     await tester.pumpWidget(
@@ -87,6 +88,7 @@ void main() {
             servicos: [
               {
                 ...servicos.first,
+                'foto_perfil': fotoPerfil,
                 'fotos_servicos': [
                   'https://example.com/foto-1.jpg',
                   'https://example.com/foto-2.jpg',
@@ -103,6 +105,19 @@ void main() {
     await tester.pump();
 
     expect(find.byType(PageView), findsOneWidget);
+    final pageView = tester.widget<PageView>(find.byType(PageView));
+    expect(
+      (pageView.childrenDelegate as SliverChildBuilderDelegate).childCount,
+      3,
+    );
+    final galeria = find.byType(PageView);
+    final primeiraImagem = tester.widget<Image>(
+      find.descendant(of: galeria, matching: find.byType(Image)).first,
+    );
+    expect(
+      primeiraImagem.image,
+      isA<NetworkImage>().having((image) => image.url, 'url', fotoPerfil),
+    );
     final carouselStack = find
         .ancestor(of: find.byType(PageView), matching: find.byType(Stack))
         .first;
@@ -113,9 +128,9 @@ void main() {
     final indicadores = tester
         .widgetList<AnimatedContainer>(indicadorFinder)
         .toList();
-    expect(indicadores, hasLength(2));
+    expect(indicadores, hasLength(3));
     expect(tester.getSize(indicadorFinder.first).width, 22);
-    expect(tester.getSize(indicadorFinder.last).width, 14);
+    expect(tester.getSize(indicadorFinder.at(1)).width, 14);
 
     await tester.fling(find.byType(PageView), const Offset(-500, 0), 1000);
     await tester.pumpAndSettle();
@@ -123,9 +138,20 @@ void main() {
     final indicadoresAtualizados = tester.widgetList<AnimatedContainer>(
       indicadorFinder,
     );
-    expect(indicadoresAtualizados, hasLength(2));
+    expect(indicadoresAtualizados, hasLength(3));
     expect(tester.getSize(indicadorFinder.first).width, 14);
-    expect(tester.getSize(indicadorFinder.last).width, 22);
+    expect(tester.getSize(indicadorFinder.at(1)).width, 22);
+    final imagemAtual = tester.widget<Image>(
+      find.descendant(of: galeria, matching: find.byType(Image)).first,
+    );
+    expect(
+      imagemAtual.image,
+      isA<NetworkImage>().having(
+        (image) => image.url,
+        'url',
+        'https://example.com/foto-1.jpg',
+      ),
+    );
   });
 
   testWidgets('exibe foto de perfil e nome do prestador no card', (

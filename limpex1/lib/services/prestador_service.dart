@@ -46,9 +46,9 @@ class PrestadorService {
     return valores
         .map((valor) {
           if (valor is Map) {
-            return (valor['url'] ?? valor['publicUrl'] ?? '').toString();
+            return (valor['url'] ?? valor['publicUrl'] ?? '').toString().trim();
           }
-          return valor.toString();
+          return valor.toString().trim();
         })
         .where((url) {
           final uri = Uri.tryParse(url);
@@ -57,6 +57,19 @@ class PrestadorService {
               uri.host.isNotEmpty;
         })
         .toList();
+  }
+
+  static String? extrairFotoPerfil(dynamic fotoPerfil) {
+    final fotos = extrairFotos(fotoPerfil);
+    return fotos.isEmpty ? null : fotos.first;
+  }
+
+  static List<String> fotosParaExibicao({
+    dynamic fotoPerfil,
+    dynamic fotosServico,
+  }) {
+    final perfilValido = extrairFotoPerfil(fotoPerfil);
+    return [?perfilValido, ...extrairFotos(fotosServico)];
   }
 
   // ==========================================

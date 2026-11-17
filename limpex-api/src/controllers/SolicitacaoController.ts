@@ -315,4 +315,57 @@ export class SolicitacaoController {
       return res.status(500).json({ error: 'Erro interno ao registrar avaliação.' });
     }
   }
+
+  static async avaliarCliente(req: AuthenticatedRequest, res: Response) {
+    try {
+      const id_usuario = req.userId;
+      const id_solicitacao = Number(req.params.id);
+      const { nota, comentario } = req.body ?? {};
+
+      if (!id_usuario) {
+        return res.status(401).json({ error: 'Usuário não autenticado.' });
+      }
+      if (!Number.isInteger(id_solicitacao) || id_solicitacao <= 0) {
+        return res.status(400).json({ error: 'Solicitação inválida.' });
+      }
+      if (typeof nota !== 'number' || !Number.isInteger(nota) || nota < 1 || nota > 5) {
+        return res.status(400).json({ error: 'A nota deve ser um número inteiro de 1 a 5.' });
+      }
+      if (comentario != null && (typeof comentario !== 'string' || comentario.length > 1000)) {
+        return res.status(400).json({ error: 'O comentário deve ter até 1000 caracteres.' });
+      }
+
+      const prestador = await PrestadorRepository.buscarPorUsuario(id_usuario);
+      if (!prestador) {
+        return res.status(403).json({ error: 'Apenas prestadores podem avaliar clientes.' });
+      }
+
+      const resultado = await AvaliacaoRepository.criarAvaliacaoCliente(
+        id_solicitacao,
+        prestador.id_prestador,
+        nota,
+        typeof comentario === 'string' && comentario.trim()
+          ? comentario.trim()
+          : null,
+      );
+      switch (resultado.resultado) {
+        case 'NAO_ENCONTRADA':
+          return res.status(404).json({ error: 'Solicitação não encontrada.' });
+        case 'NAO_E_PRESTADOR':
+          return res.status(403).json({ error: 'A solicitação não pertence a este prestador.' });
+        case 'NAO_CONCLUIDA':
+          return res.status(409).json({ error: 'O serviço ainda não foi concluído.' });
+        case 'JA_AVALIADA':
+          return res.status(409).json({ error: 'Este cliente já foi avaliado nesta solicitação.' });
+        case 'CRIADA':
+          return res.status(201).json({
+            message: 'Avaliação do cliente registrada com sucesso.',
+            avaliacao: resultado.avaliacao,
+          });
+      }
+    } catch (error) {
+      console.error('Erro ao avaliar cliente:', error);
+      return res.status(500).json({ error: 'Erro interno ao registrar avaliação do cliente.' });
+    }
+  }
 }

@@ -8,6 +8,20 @@ class ProfileService {
   static const String baseUrl = 'https://hads-mateusgeisel-limpex.onrender.com';
   final AuthService _authService = AuthService();
 
+  Future<Map<String, dynamic>> buscarPerfilPublicoCliente(int idCliente) async {
+    final response = await _request(
+      'GET',
+      '$baseUrl/usuarios/$idCliente/perfil-publico',
+    );
+    final data = _decodeResponse(response);
+    if (response.statusCode != 200 || data is! Map) {
+      throw StateError(
+        _errorMessage(data, 'Não foi possível carregar o perfil do cliente.'),
+      );
+    }
+    return Map<String, dynamic>.from(data);
+  }
+
   Future<Map<String, dynamic>> getProfile() async {
     final response = await _request('GET', '$baseUrl/usuarios/me');
     final data = _decodeResponse(response);

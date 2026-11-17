@@ -131,12 +131,13 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
     Map<String, dynamic> servico,
     String nomePrestador,
     bool agendaDisponivel,
+    String? fotoPerfil,
   ) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => ServicoDetalheView(
-          servico: servico,
+          servico: {...servico, 'foto_perfil': fotoPerfil},
           nomePrestador: nomePrestador,
           agendaDisponivel: agendaDisponivel,
           onSolicitar: () {
@@ -435,9 +436,12 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
     required Map<String, dynamic> servico,
     required String nomePrestador,
     required bool agendaDisponivel,
+    required String? fotoPerfil,
   }) {
-    final fotos = PrestadorService.extrairFotos(
-      servico['fotos'] ??
+    final fotos = PrestadorService.fotosParaExibicao(
+      fotoPerfil: fotoPerfil,
+      fotosServico:
+          servico['fotos'] ??
           servico['foto_url'] ??
           servico['imagem_url'] ??
           servico['imagens'],
@@ -577,6 +581,7 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
                       servico,
                       nomePrestador,
                       agendaDisponivel,
+                      fotoPerfil,
                     ),
                     icon: const Icon(Icons.open_in_new, size: 16),
                     label: const Text('Ver detalhes'),
@@ -594,6 +599,7 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
     required List<dynamic> servicos,
     required String nomePrestador,
     required bool agendaDisponivel,
+    required String? fotoPerfil,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -627,6 +633,7 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
                         servico: Map<String, dynamic>.from(item as Map),
                         nomePrestador: nomePrestador,
                         agendaDisponivel: agendaDisponivel,
+                        fotoPerfil: fotoPerfil,
                       ),
                     ),
                 ],
@@ -1075,6 +1082,9 @@ class _PerfilPrestadorViewState extends State<PerfilPrestadorView> {
                     servicos: servicos,
                     nomePrestador: nome,
                     agendaDisponivel: agendaDisponivel,
+                    fotoPerfil: PrestadorService.extrairFotoPerfil(
+                      prestador['foto_perfil'],
+                    ),
                   ),
                   const SizedBox(height: 30),
                   _buildReviewsSection(
