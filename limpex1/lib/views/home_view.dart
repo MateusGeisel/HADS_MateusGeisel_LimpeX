@@ -685,7 +685,15 @@ class _HomeViewState extends State<HomeView> {
                 onPressed: () => _selecionarNavegacao(0),
                 icon: const Icon(Icons.arrow_back),
               ),
-        title: const Text('LimpeX'),
+        title: TextButton.icon(
+          style: TextButton.styleFrom(
+            foregroundColor: Colors.white,
+            padding: EdgeInsets.zero,
+          ),
+          onPressed: () => _selecionarNavegacao(0),
+          icon: const Icon(Icons.home_outlined, size: 18),
+          label: const Text('LimpeX'),
+        ),
         actions: widget.user == null
             ? [
                 TextButton(

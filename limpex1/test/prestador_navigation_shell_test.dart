@@ -65,5 +65,15 @@ void main() {
     await tester.tap(navigationLabel('Meus Serviços'));
     await tester.pumpAndSettle();
     expect(find.text('Serviços: 1'), findsOneWidget);
+
+    await tester.tap(find.text('LimpeX'));
+    await tester.pumpAndSettle();
+    expect(find.text('Conteúdo do dashboard'), findsOneWidget);
+    expect(
+      tester
+          .widget<BottomNavigationBar>(find.byType(BottomNavigationBar))
+          .currentIndex,
+      0,
+    );
   });
 }

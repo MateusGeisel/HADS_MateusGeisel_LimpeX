@@ -33,7 +33,15 @@ class _PrestadorNavigationShellState extends State<PrestadorNavigationShell> {
       appBar: AppBar(
         backgroundColor: AppTheme.primaryBlue,
         foregroundColor: Colors.white,
-        title: const Text('LimpeX'),
+        title: TextButton.icon(
+          style: TextButton.styleFrom(
+            foregroundColor: Colors.white,
+            padding: EdgeInsets.zero,
+          ),
+          onPressed: () => setState(() => _selectedIndex = 0),
+          icon: const Icon(Icons.home_outlined, size: 18),
+          label: const Text('LimpeX'),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
